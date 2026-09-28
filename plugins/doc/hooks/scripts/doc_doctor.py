@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Diagnose the doc plugin install when a session starts.
+
+Resolves the plugin root through the same env-var chain the hooks use
+(`DOC_PLUGIN_ROOT`, `$OPENHANDS_PROJECT_DIR/plugins/doc`,
+`~/.agents/plugins/doc`, `~/.openhands/plugins/installed/doc`), checks the
+plugin layout (`.plugin/plugin.json`, `agents/`, `skills/`), and reports which
+sibling plugins (wire, mech, circuit, ux, bard) are installed next to it, so
+the doc agents know whom they can ask and which questions must go to the
+user instead. The hook is advisory and always exits 0.
+
+Python standard library only.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+ROOT_ENV = "DOC_PLUGIN_ROOT"
+PROJECT_ENV = "OPENHANDS_PROJECT_DIR"
+SELF_PATH = Path("hooks") / "scripts" / "doc_doctor.py"
+REQUIRED_PATHS = (".plugin/plugin.json", "agents", "skills")
+SIBLINGS = ("wire", "mech", "circuit", "ux", "bard")
+
+
+def _plugin_dirs(name: str) -> list[Path]:
+    project = os.environ.get(PROJECT_ENV) or "."
+    home = Path.home()
+    return [
+        Path(project).expanduser() / "plugins" / name,
+        home / ".agents" / "plugins" / name,
+        home / ".openhands" / "plugins" / "installed" / name,
+    ]
+
+
+def _candidate_roots() -> list[Path]:
+    candidates: list[Path] = []
+    root = os.environ.get(ROOT_ENV)
+    if root:
+        candidates.append(Path(root).expanduser())
+    return candidates + _plugin_dirs("doc")
+
+
+def _resolve_root() -> Path | None:
+    """Resolve the plugin root exactly like the hooks.json command template."""
+    for candidate in _candidate_roots():
+        if (candidate / SELF_PATH).is_file():
+            return candidate.resolve()
+    return None
+
+
+def sibling_status() -> dict[str, bool]:
+    return {
+        name: any((d / ".plugin" / "plugin.json").is_file() for d in _plugin_dirs(name))
+        for name in SIBLINGS
+    }
+
+
+def findings(root: Path | None) -> list[str]:
+    lines: list[str] = []
+    if root is None:
+        lines.append(
+            "plugin root unresolved; checked "
+            + ", ".join(str(c) for c in _candidate_roots())
+        )
+    else:
+        missing = [rel for rel in REQUIRED_PATHS if not (root / rel).exists()]
+        if missing:
+            lines.append(
+                f"plugin layout incomplete at {root}: missing {', '.join(missing)}"
+            )
+        else:
+            lines.append(f"plugin layout ok at {root}")
+    status = sibling_status()
+    lines.append(
+        "siblings: "
+        + ", ".join(
+            f"{name}={'installed' if ok else 'missing'}" for name, ok in status.items()
+        )
+    )
+    if not any(status.values()):
+        lines.append(
+            "no sibling plugin found; gather facts from workspace files and ask"
+            " the user for anything they cannot answer"
+        )
+    return lines
+
+
+def main() -> int:
+    try:
+        context = "doc doctor: " + "; ".join(findings(_resolve_root()))
+    except Exception as exc:  # noqa: BLE001 - the doctor is advisory
+        print(f"doc_doctor: {exc}", file=sys.stderr)
+        context = "doc doctor: probe failed; see the hook stderr log"
+    print(json.dumps({"decision": "allow", "additionalContext": context}))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
