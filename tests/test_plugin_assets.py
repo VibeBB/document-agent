@@ -12,9 +12,15 @@ from conftest import PLUGIN_ROOT, REPO_ROOT
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 FENCE_RE = re.compile(r"(?ms)^(```+|~~~+).*?^\1[ \t]*$")
-AGENT_NAMES = {"doc-writer", "doc-liaison", "doc-review"}
-SKILL_NAMES = {"doc-craft", "doc-lint", "doc-inquiry", "doc-brief-rules"}
-COMMAND_NAMES = {"write", "interview", "doctor"}
+AGENT_NAMES = {"doc-writer", "doc-liaison", "doc-review", "doc-launch"}
+SKILL_NAMES = {
+    "doc-craft",
+    "doc-lint",
+    "doc-inquiry",
+    "doc-brief-rules",
+    "doc-launch-craft",
+}
+COMMAND_NAMES = {"write", "interview", "doctor", "launch"}
 
 
 def _frontmatter(path: Path) -> dict[str, str]:

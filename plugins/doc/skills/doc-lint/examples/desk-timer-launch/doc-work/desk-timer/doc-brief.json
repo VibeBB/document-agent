@@ -1,0 +1,61 @@
+{
+  "artifact_kind": "doc_brief",
+  "schema_version": "0.2",
+  "language": "en",
+  "product": {
+    "name": "Tomo Timer",
+    "tagline": "A one-knob desk timer that tells you when to take a break.",
+    "summary": "Tomo Timer is a palm-sized USB-C desk timer. Turn the knob to set minutes, press it to start, and a soft light ring counts down. When time is up it chimes once and glows amber until you press the knob again.",
+    "audience": ["People who work at a desk and forget to take breaks", "Students using focus sessions"],
+    "problem": "Phone timers pull you into notifications; you wanted a timer you can set without looking at a screen.",
+    "value": ["Set a timer in one twist", "No app, no account, no notifications", "Runs from any USB-C charger"],
+    "vision": "I wanted something my grandmother could use without instructions.",
+    "vision_source": "S4"
+  },
+  "targets": [
+    {"kind": "product_page", "path": "docs/launch/product-page.md"},
+    {"kind": "press_release", "path": "docs/launch/press-release.md"},
+    {"kind": "demo_script", "path": "docs/launch/demo-script.md"},
+    {"kind": "launch_plan", "path": "docs/launch/launch-plan.md"}
+  ],
+  "sources": [
+    {"id": "S1", "kind": "file", "ref": "firmware/src/main.c"},
+    {"id": "S2", "kind": "sibling_artifact", "ref": "circuit/tomo.brief.json", "agent": "circuit"},
+    {"id": "S3", "kind": "sibling_agent", "ref": "doc-work/desk-timer/inquiries.md#Q1", "agent": "mech"},
+    {"id": "S4", "kind": "user_interview", "ref": "doc-work/desk-timer/interview.md#A1"},
+    {"id": "S5", "kind": "user_interview", "ref": "doc-work/desk-timer/interview.md#A2"},
+    {"id": "S6", "kind": "sibling_artifact", "ref": "cues/tomo-timer/cues.json", "agent": "bard"}
+  ],
+  "facts": [
+    {"id": "F1", "text": "The knob sets 1 to 90 minutes in 1-minute steps.", "sources": ["S1"]},
+    {"id": "F2", "text": "Power is USB-C 5 V, under 0.5 W.", "sources": ["S2"]},
+    {"id": "F3", "text": "The enclosure is 62 mm across and 28 mm tall.", "sources": ["S3"]},
+    {"id": "F4", "text": "A 12-LED ring shows the remaining time.", "sources": ["S1", "S2"]},
+    {"id": "F5", "text": "The price is 4,980 yen including tax.", "sources": ["S5"]},
+    {"id": "F6", "text": "Pre-orders open on 2026-11-02 at the Tomo Timer online shop.", "sources": ["S5"]},
+    {"id": "F7", "text": "The first buyers are desk workers who forget breaks and students who use focus sessions.", "sources": ["S5"]},
+    {"id": "F8", "text": "The done chime is a two-tone rising cue that lasts 600 ms.", "sources": ["S6"]}
+  ],
+  "inquiries": [
+    {"id": "Q1", "to": "mech", "question": "What are the enclosure outer dimensions?", "status": "answered", "answer": "62 mm diameter, 28 mm height.", "source": "S3"},
+    {"id": "Q2", "to": "user", "question": "What is the price and when do pre-orders open?", "status": "answered", "answer": "4,980 yen including tax; pre-orders open on 2026-11-02 at our online shop.", "source": "S5"},
+    {"id": "Q3", "to": "user", "question": "Who answers press inquiries, and at which address?", "status": "unanswered"}
+  ],
+  "launch": {
+    "audiences": [
+      {"id": "A1", "name": "Desk workers who forget breaks", "insight": "They want a break reminder that does not pull them into their phone.", "facts": ["F7"]},
+      {"id": "A2", "name": "Students in focus sessions", "insight": "They time focus blocks and want a timer they can set without looking.", "facts": ["F7", "F1"]}
+    ],
+    "messages": [
+      {"id": "M1", "text": "Set a timer in one twist.", "audiences": ["A1", "A2"], "facts": ["F1"], "targets": ["product_page", "press_release", "demo_script"]},
+      {"id": "M2", "text": "No app, no account, no notifications.", "audiences": ["A1"], "facts": ["F2", "F4"], "targets": ["product_page", "launch_plan"]}
+    ],
+    "channels": [
+      {"id": "C1", "kind": "product_page", "audiences": ["A1", "A2"], "messages": ["M1", "M2"]},
+      {"id": "C2", "kind": "press", "audiences": ["A1"], "messages": ["M1"]},
+      {"id": "C3", "kind": "video", "audiences": ["A2"], "messages": ["M1"]}
+    ],
+    "call_to_action": {"text": "Pre-order Tomo Timer", "facts": ["F5", "F6"]}
+  },
+  "open_questions": ["The press contact is unknown; the press release asks readers to use the online shop's contact form until one is named."]
+}

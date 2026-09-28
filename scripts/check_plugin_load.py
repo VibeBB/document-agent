@@ -15,9 +15,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_DIR = REPO_ROOT / "plugins" / "doc"
 
-EXPECTED_AGENTS = {"doc-liaison", "doc-review", "doc-writer"}
-EXPECTED_SKILLS = {"doc-brief-rules", "doc-craft", "doc-inquiry", "doc-lint"}
-EXPECTED_COMMANDS = {"doctor", "interview", "write"}
+EXPECTED_AGENTS = {"doc-launch", "doc-liaison", "doc-review", "doc-writer"}
+EXPECTED_SKILLS = {
+    "doc-brief-rules",
+    "doc-craft",
+    "doc-inquiry",
+    "doc-launch-craft",
+    "doc-lint",
+}
+EXPECTED_COMMANDS = {"doctor", "interview", "launch", "write"}
 EXPECTED_SESSION_START_HOOKS = {"doc-doctor", "ensure-llm-profiles"}
 EXPECTED_USER_PROMPT_SUBMIT_HOOKS: set[str] = set()
 EXPECTED_PRE_TOOL_USE_HOOKS = {"protect-lint-report", "safety-rail"}
@@ -103,7 +109,12 @@ def check_plugin(plugin_dir: Path) -> list[str]:
                 )
 
     registered = _registered_tools()
-    min_examples = {"doc-writer": 3, "doc-liaison": 2, "doc-review": 2}
+    min_examples = {
+        "doc-writer": 3,
+        "doc-liaison": 2,
+        "doc-review": 2,
+        "doc-launch": 3,
+    }
     for agent in plugin.agents:
         for tool in agent.tools:
             if tool not in registered:

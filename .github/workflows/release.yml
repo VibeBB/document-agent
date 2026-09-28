@@ -259,6 +259,12 @@ jobs:
           --root plugins/doc/skills/doc-lint/examples/desk-timer
           --brief plugins/doc/skills/doc-lint/examples/desk-timer/doc-work/desk-timer/doc-brief.json
           --no-write
+      - name: Lint shipped launch example
+        run: >
+          uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py
+          --root plugins/doc/skills/doc-lint/examples/desk-timer-launch
+          --brief plugins/doc/skills/doc-lint/examples/desk-timer-launch/doc-work/desk-timer/doc-brief.json
+          --no-write
       - name: Build release zips
         run: |
           # Ship the project license and third-party notices inside the

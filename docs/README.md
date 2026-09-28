@@ -19,3 +19,4 @@
 | [0003](adr/ADR-0003-sibling-inquiry-and-user-interview.md) | Asking siblings through shared artifacts and read-only reviewers; interviewing the user |
 | [0004](adr/ADR-0004-lint-report-protection.md) | `doc-lint.json` is generated only by `doc_lint.py` |
 | [0005](adr/ADR-0005-quality-document-extension.md) | Reserving quality-document kinds for a later schema |
+| [0006](adr/ADR-0006-fact-grounded-launch-material.md) | Fact-grounded launch material in brief schema 0.2 |
