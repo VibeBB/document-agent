@@ -1,0 +1,12 @@
+{
+  "name": "doc",
+  "version": "0.1.0",
+  "description": "doc plugin: writes product documentation (README with diagrams and quick start, user manual, technical reference) by asking sibling agents and interviewing the user",
+  "author": {
+    "name": "VibeBB",
+    "url": "https://github.com/VibeBB/document-agent"
+  },
+  "license": "BSD-3-Clause",
+  "repository": "https://github.com/VibeBB/document-agent",
+  "entry_command": "write"
+}

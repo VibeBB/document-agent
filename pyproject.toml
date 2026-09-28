@@ -1,0 +1,45 @@
+[project]
+name = "document-agent"
+version = "0.1.0"
+description = "An OpenHands plugin that writes product documentation (README, user manual, technical reference) with sibling-agent inquiries and user interviews"
+requires-python = ">=3.12"
+license = "BSD-3-Clause"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.9",
+    "pyright==1.1.414",
+]
+sdk-check = ["openhands-sdk==1.49.6", "openhands-tools==1.49.6"]
+
+[tool.uv]
+default-groups = ["dev"]
+required-version = "==0.12.19"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "scripts", "tests"]
+exclude = ["**/__pycache__", "**/.venv"]
+# The brief JSON boundary is intentionally untyped; strict Unknown-reporting
+# would only repeat what the validator already checks at runtime.
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportMissingParameterType = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-rs"
