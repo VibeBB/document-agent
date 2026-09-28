@@ -16,7 +16,9 @@ product's documentation into the OpenHands workspace — a README a first-time
 user understands (a product explanation with a diagram, then a quick start),
 a user manual, and an engineer-facing technical reference — asking sibling
 agents for facts they own and interviewing the user for what only they know.
-Quality documents are planned (ADR-0005).
+It also writes fact-grounded launch material — a product page, a press
+release, a demo video script, and a launch plan (ADR-0006). Quality documents
+are planned (ADR-0005).
 
 ## Layout
 
@@ -26,9 +28,11 @@ plugins/doc/
 ├── agents/
 │   ├── doc-liaison.md        # Gathers facts: workspace survey, sibling inquiries (task)
 │   ├── doc-writer.md         # Brief, outline, README / manual / technical reference, lint
-│   └── doc-review.md         # Read-only review as first-time reader, user, engineer
+│   ├── doc-review.md         # Read-only review as first-time reader, user, engineer, buyer
+│   └── doc-launch.md         # Launch brief, product page / press release / demo / plan, lint
 ├── commands/
 │   ├── write.md              # /doc:write — context.md, liaison, interview, writer, verify
+│   ├── launch.md             # /doc:launch — launch context, liaison, interview, doc-launch
 │   ├── interview.md          # /doc:interview — ask the user, record answers verbatim
 │   └── doctor.md             # /doc:doctor — plugin root, layout, sibling availability
 ├── hooks/                    # session_start doctor + profiles, pre_tool_use report guard +
@@ -36,7 +40,8 @@ plugins/doc/
 └── skills/
     ├── doc-craft/            # Reader-first writing rules, templates, Mermaid rules, checklist
     ├── doc-inquiry/          # Fact ownership per sibling, inquiry records, interview bank
-    ├── doc-lint/             # doc-brief.json contract + doc_lint.py (stdlib only) + example
+    ├── doc-launch-craft/     # Audiences, messages, launch templates, claim rules
+    ├── doc-lint/             # doc-brief.json contract + doc_lint.py (stdlib only) + examples
     └── doc-brief-rules/      # Path-triggered rule on doc-brief.json / doc-lint.json
 docs/
 ├── doc-brief-contract.md     # Canonical brief / report contract
@@ -51,7 +56,8 @@ tests/                        # Linter, hook, and plugin-asset tests
 - Every product claim in a generated document is a fact in
   `doc-work/<slug>/doc-brief.json` citing at least one source. Unknowns go to
   `open_questions`; documents never contain placeholders or guesses
-  (ADR-0002).
+  (ADR-0002). Launch material may state a number or a superlative only when
+  a fact states it (ADR-0006).
 - The maker's intent (`product.vision`) comes only from a user interview,
   recorded verbatim (ADR-0003).
 - Sibling facts come from sibling artifacts or a sibling's answer through

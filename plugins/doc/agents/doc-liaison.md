@@ -59,7 +59,8 @@ Write `survey.md` with three lists, every item tagged with its source (`[file:<p
 - **Known**: concrete facts (product name, what it does, audience, setup steps, interfaces,
   specifications, commands).
 - **Missing**: what a README, a user manual, or a technical reference needs but the workspace
-  does not say.
+  does not say. When the prompt names launch targets, also what launch material needs: price,
+  availability date, where to buy, audience evidence, press contact, and demo-able behavior.
 - **Conflicts**: places where two sources disagree.
 
 ## Stage 2 — Ask siblings (writes `inquiries.md`)

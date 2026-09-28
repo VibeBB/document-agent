@@ -29,6 +29,15 @@ designed that part — and, when only you can answer, it interviews you.
 | `docs/user-manual.md` | people using the product | setup, how to use, care and safety, troubleshooting, specifications |
 | `docs/technical-reference.md` | engineers | architecture diagram, interfaces, data and configuration, development |
 
+With `/doc:launch` it also writes launch material from the same facts:
+
+| Document | For | Contents |
+| --- | --- | --- |
+| `docs/launch/product-page.md` | prospective buyers | tagline, key messages, use-flow diagram, benefits, specifications, call to action |
+| `docs/launch/press-release.md` | journalists | headline, lead, body with the maker's quote, About, media contact |
+| `docs/launch/demo-script.md` | the video maker | shot table with time, visual, and narration / audio (using the product's own bard sound cues) |
+| `docs/launch/launch-plan.md` | you | audiences, key messages, channels, launch checklist |
+
 Documents follow the conversation language (English or Japanese). Every
 product claim comes from a sourced fact; anything nobody could confirm is
 listed back to you as an open question instead of being guessed.
@@ -67,6 +76,11 @@ flowchart LR
   returns findings; it never edits the documents.
 - The lint report `doc-lint.json` can only be written by the linter
   ([ADR-0004](docs/adr/ADR-0004-lint-report-protection.md)).
+- `doc-launch` writes launch material from a schema 0.2 brief whose `launch`
+  block ties every audience, key message, channel, and call to action to
+  facts. The linter rejects numbers and superlatives that no fact states and
+  checks each kind's structure
+  ([ADR-0006](docs/adr/ADR-0006-fact-grounded-launch-material.md)).
 
 Quality documents (quality plans, test reports, risk assessments,
 inspection records) are planned; their kinds are reserved in the contract
@@ -109,6 +123,7 @@ PluginSource("github:VibeBB/document-agent", ref="main", repo_path="plugins/doc"
 | Command | What it does |
 | --- | --- |
 | `/doc:write [all\|readme\|manual\|tech] [subject]` | Gather facts, interview when needed, write, lint, review |
+| `/doc:launch [all\|page\|press\|demo\|plan] [subject]` | Write the product page, press release, demo script, and launch plan from sourced facts |
 | `/doc:interview [slug] [topic]` | Ask you up to five questions and record the answers verbatim |
 | `/doc:doctor` | Check the plugin install and which sibling plugins are available |
 
@@ -154,6 +169,18 @@ BSD-3-Clause — see [LICENSE](LICENSE) and
 | `docs/user-manual.md` | 使う人 | 準備、使い方、安全上の注意、トラブルシューティング、仕様 |
 | `docs/technical-reference.md` | エンジニア | アーキテクチャ図、インターフェース、データと設定、開発手順 |
 
+`/doc:launch` を使うと、同じ事実からローンチ用の資料も書きます。
+
+| ドキュメント | 読者 | 内容 |
+| --- | --- | --- |
+| `docs/launch/product-page.md` | 購入を検討する人 | キャッチコピー、キーメッセージ、利用の流れの図、特長、仕様、行動喚起 |
+| `docs/launch/press-release.md` | 記者 | 見出し、リード文、作り手の言葉を含む本文、製品について、報道窓口 |
+| `docs/launch/demo-script.md` | 動画の制作者 | 時間・映像・ナレーション/音の表（製品の音は bard のサウンドキューを使用） |
+| `docs/launch/launch-plan.md` | あなた | ターゲット、キーメッセージ、チャネル、ローンチのチェックリスト |
+
+価格・発売日・販売先・最上級表現（「世界初」「最高」など）は、出典付きの事実に
+あるものだけを書きます。事実にない数字や最上級表現は lint で不合格になります。
+
 文書は会話の言語（日本語または英語）で書かれます。製品についての記述はすべて
 出典付きの事実に基づきます。誰にも確認できなかったことは推測で書かず、
 未解決の質問としてあなたに返します。
@@ -169,6 +196,7 @@ BSD-3-Clause — see [LICENSE](LICENSE) and
 | コマンド | 内容 |
 | --- | --- |
 | `/doc:write [all\|readme\|manual\|tech] [題材]` | 事実を集め、必要ならインタビューし、書いて、lint とレビューをします |
+| `/doc:launch [all\|page\|press\|demo\|plan] [題材]` | 出典付きの事実から製品ページ、プレスリリース、デモ動画台本、ローンチ計画を書きます |
 | `/doc:interview [slug] [話題]` | 最大5問を質問し、回答をそのまま記録します |
 | `/doc:doctor` | プラグインの導入状態と、使える姉妹プラグインを確認します |
 

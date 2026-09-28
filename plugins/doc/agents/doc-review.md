@@ -47,10 +47,18 @@ Read three times, as three people:
 3. **An engineer** using the technical reference: are the interfaces, units, and build steps
    precise enough to act on? Does the architecture diagram match the text?
 
+When the targets are launch kinds (`product_page`, `press_release`, `demo_script`,
+`launch_plan`), also read `<doc plugin root>/skills/doc-launch-craft/SKILL.md` and read a
+fourth time, as **a prospective buyer or journalist** meeting the material cold: after the
+first screen of the product page, can they say what it is, why it matters to them, and what
+to do next? Does each `launch.audiences[].insight` get an answer? Is anything implied (price,
+date, comparison, endorsement) that no fact supports? Use the categories `message`,
+`audience`, and `claim` for these findings.
+
 Also check **accuracy**: every product claim must match a fact in the brief. A claim with no
 fact, or a maker's-intent statement not backed by `product.vision`, is a finding.
 
 Return findings as a list, most important first. Each finding: `id` (R1, R2, …), `document`,
 `where` (heading or line), `category` (one of clarity, first-impression, diagram, quick-start,
-completeness, accuracy, consistency, accessibility, jargon), `finding`, `suggestion`. At most
+completeness, accuracy, consistency, accessibility, jargon, message, audience, claim), `finding`, `suggestion`. At most
 fifteen findings. If the documents are good, say so and return fewer.
