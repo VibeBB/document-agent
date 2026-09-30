@@ -14,6 +14,7 @@ SKIP_PARTS = {".git", ".venv", "node_modules", "out"}
 SDK_DECL_PATTERN = re.compile(r"OpenHands Software Agent SDK v(\d+\.\d+\.\d+)")
 SDK_PIN_PATTERN = re.compile(r"^openhands-sdk==(\d+\.\d+\.\d+)$")
 FENCE_PATTERN = re.compile(r"(?ms)^(```+|~~~+).*?^\1[ \t]*$")
+INLINE_CODE_PATTERN = re.compile(r"(`+)(?:(?!\1).)+?\1", re.S)
 
 
 def check_links() -> list[str]:
@@ -21,13 +22,11 @@ def check_links() -> list[str]:
     for markdown in ROOT.rglob("*.md"):
         if any(part in SKIP_PARTS for part in markdown.parts):
             continue
-        for target in LINK_PATTERN.findall(
-            FENCE_PATTERN.sub("", markdown.read_text(encoding="utf-8"))
-        ):
+        text = FENCE_PATTERN.sub("", markdown.read_text(encoding="utf-8"))
+        text = INLINE_CODE_PATTERN.sub("", text)
+        for target in LINK_PATTERN.findall(text):
             target = target.strip().strip("<>")
             if target.startswith(("#", "http://", "https://", "mailto:")):
-                continue
-            if target == "path":
                 continue
             path: Path = (markdown.parent / unquote(target.split("#", 1)[0])).resolve()
             if not path.exists():

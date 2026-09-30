@@ -12,6 +12,7 @@ from conftest import PLUGIN_ROOT, REPO_ROOT
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 FENCE_RE = re.compile(r"(?ms)^(```+|~~~+).*?^\1[ \t]*$")
+INLINE_CODE_PATTERN = re.compile(r"(`+)(?:(?!\1).)+?\1", re.S)
 AGENT_NAMES = {"doc-writer", "doc-liaison", "doc-review", "doc-launch"}
 SKILL_NAMES = {
     "doc-craft",
@@ -161,13 +162,12 @@ def _markdown_files() -> list[Path]:
 @pytest.mark.parametrize("path", _markdown_files(), ids=lambda p: p.name)
 def test_relative_links_resolve(path: Path) -> None:
     text = FENCE_RE.sub("", path.read_text(encoding="utf-8"))
+    text = INLINE_CODE_PATTERN.sub("", text)
     for target in LINK_RE.findall(text):
         if "://" in target or target.startswith("#") or target.startswith("mailto:"):
             continue
         target = target.split("#", 1)[0].split("?", 1)[0]
         if not target or target.startswith("<"):
-            continue
-        if target == "path":
             continue
         resolved = (path.parent / target).resolve()
         assert resolved.exists(), f"{path}: broken link {target}"
