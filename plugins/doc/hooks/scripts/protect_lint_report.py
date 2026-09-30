@@ -238,7 +238,8 @@ def main() -> int:
     target = _is_terminal_write(payload)
     if target is not None:
         print(
-            f"generated report or vision evidence may not be written through the terminal: {target}",
+            f"generated report or vision evidence may not be written "
+            f"through the terminal: {target}",
             file=sys.stderr,
         )
         return 2
