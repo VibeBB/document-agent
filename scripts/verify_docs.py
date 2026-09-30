@@ -27,6 +27,8 @@ def check_links() -> list[str]:
             target = target.strip().strip("<>")
             if target.startswith(("#", "http://", "https://", "mailto:")):
                 continue
+            if target == "path":
+                continue
             path: Path = (markdown.parent / unquote(target.split("#", 1)[0])).resolve()
             if not path.exists():
                 errors.append(f"{markdown.relative_to(ROOT)}: missing {target}")

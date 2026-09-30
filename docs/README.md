@@ -21,3 +21,4 @@
 | [0004](adr/ADR-0004-lint-report-protection.md) | `doc-lint.json` is generated only by `doc_lint.py` |
 | [0005](adr/ADR-0005-quality-document-extension.md) | Reserving quality-document kinds for a later schema |
 | [0006](adr/ADR-0006-fact-grounded-launch-material.md) | Fact-grounded launch material in brief schema 0.2 |
+| [0007](adr/ADR-0007-vision-lane.md) | Inspect and record figures and user-attached images |

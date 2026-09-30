@@ -23,6 +23,17 @@ hooks:
         - type: command
           name: safety-rail
           command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/safety_rail.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/safety_rail.py"'
+  post_tool_use:
+    - matcher: inspect_image_with_vision
+      hooks:
+        - type: command
+          name: record-vision-tool-event
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/record_vision_tool_event.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/record_vision_tool_event.py"'
+    - matcher: file_editor
+      hooks:
+        - type: command
+          name: record-image-observation
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/record_image_observation.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/record_image_observation.py"'
 permission_mode: never_confirm
 ---
 
@@ -151,3 +162,12 @@ Return to the parent, in the conversation language:
 - every `open_questions` entry and every inquiry that is not `answered`, phrased as questions
   the parent can put to the user,
 - the review findings you declined, with reasons.
+
+Images. User-attached screenshots and photos are materialized under
+`intake/attachments/` with a provenance `manifest.jsonl`. Before describing
+any image in a document — a user screenshot, a product photo, or a sibling
+render such as `out/<name>/*.png` — open it with `file_editor view` and
+describe only what it shows. A caption or step that depends on a picture
+you could not see is a question for the user, not a guess. Embed an image
+only when the file exists in the workspace, with alt text that states what
+it shows.

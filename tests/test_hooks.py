@@ -162,13 +162,35 @@ def test_protect_lint_report_denies_writes() -> None:
     for payload in (
         _editor("create", "doc-work/x/doc-lint.json", file_text="{}"),
         _editor("str_replace", "/w/doc-work/x/doc-lint.json", old_str="a", new_str="b"),
+        _editor("create", "observations/doc/image-observations.jsonl", file_text=""),
+        _editor(
+            "str_replace",
+            "/w/observations/doc/vision-tool-events.jsonl",
+            old_str="a",
+            new_str="b",
+        ),
+        _editor("create", "intake/attachments/manifest.jsonl", file_text=""),
         _terminal("echo '{}' > doc-work/x/doc-lint.json"),
         _terminal("cp other.json doc-work/x/doc-lint.json"),
         _terminal("sed -i s/fail/pass/ doc-work/x/doc-lint.json"),
         _terminal("rm doc-work/x/doc-lint.json"),
+        _terminal("echo record >> observations/doc/image-observations.jsonl"),
+        _terminal("cp manifest.jsonl intake/attachments/manifest.jsonl"),
         {
             "tool_name": "apply_patch",
             "tool_input": {"patch": "*** Update File: doc-work/x/doc-lint.json"},
+        },
+        {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "patch": "*** Update File: observations/doc/image-observations.jsonl"
+            },
+        },
+        {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "patch": "*** Update File: intake/attachments/manifest.jsonl"
+            },
         },
     ):
         assert _run(PROTECT_SCRIPT, payload).returncode == 2, payload
@@ -177,9 +199,12 @@ def test_protect_lint_report_denies_writes() -> None:
 def test_protect_lint_report_allows_reads_and_documents() -> None:
     for payload in (
         _editor("view", "doc-work/x/doc-lint.json"),
+        _editor("view", "observations/doc/image-observations.jsonl"),
         _editor("create", "README.md", file_text="see doc-lint.json"),
+        _editor("create", "README.md", file_text="see observations/doc/notes.jsonl"),
         _editor("create", "doc-work/x/doc-brief.json", file_text="{}"),
         _terminal("cat doc-work/x/doc-lint.json"),
+        _terminal("cat observations/doc/image-observations.jsonl"),
         _terminal(f"python3 {LINT_SCRIPT} --brief doc-work/x/doc-brief.json"),
         _terminal("grep verdict doc-work/x/doc-lint.json"),
     ):

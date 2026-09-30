@@ -63,7 +63,12 @@ def test_review_agent_is_read_only() -> None:
     text = (PLUGIN_ROOT / "agents" / "doc-review.md").read_text(encoding="utf-8")
     head = FRONTMATTER_RE.match(text)
     assert head
-    assert "file_editor\n" not in head.group(1).split("hooks:")[0]
+    assert "  - file_editor\n" in head.group(1).split("hooks:")[0]
+    assert (
+        "Read-only: you run read commands (`cat`, `ls`, `git --no-pager diff`, "
+        "the linter with `--no-write`) and use `file_editor` only with `view`; nothing else."
+        in text
+    )
     assert _frontmatter(PLUGIN_ROOT / "agents" / "doc-review.md")["model"] == (
         "vibebb-review"
     )
@@ -136,10 +141,13 @@ def test_inquiry_skill_covers_every_sibling() -> None:
 def test_hooks_json_matches_agent_frontmatter() -> None:
     hooks = json.loads((PLUGIN_ROOT / "hooks" / "hooks.json").read_text("utf-8"))
     pre = {h["name"]: h["command"] for g in hooks["pre_tool_use"] for h in g["hooks"]}
+    post = {h["name"]: h["command"] for g in hooks["post_tool_use"] for h in g["hooks"]}
     for path in PLUGIN_ROOT.glob("agents/*.md"):
         text = path.read_text(encoding="utf-8")
-        for command in pre.values():
+        for command in (*pre.values(), *post.values()):
             assert f"command: '{command}'" in text, path.name
+    review = (PLUGIN_ROOT / "agents" / "doc-review.md").read_text(encoding="utf-8")
+    assert "  - file_editor\n" in review
 
 
 def _markdown_files() -> list[Path]:
@@ -157,6 +165,8 @@ def test_relative_links_resolve(path: Path) -> None:
             continue
         target = target.split("#", 1)[0].split("?", 1)[0]
         if not target or target.startswith("<"):
+            continue
+        if target == "path":
             continue
         resolved = (path.parent / target).resolve()
         assert resolved.exists(), f"{path}: broken link {target}"
