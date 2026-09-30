@@ -35,8 +35,8 @@ plugins/doc/
 │   ├── launch.md             # /doc:launch — launch context, liaison, interview, doc-launch
 │   ├── interview.md          # /doc:interview — ask the user, record answers verbatim
 │   └── doctor.md             # /doc:doctor — plugin root, layout, sibling availability
-├── hooks/                    # session_start doctor + profiles, pre_tool_use report guard +
-│                             # safety rail, stop status report (stdlib only)
+├── hooks/                    # session_start doctor/profile/intake, pre_tool_use report guard +
+│                             # safety rail, stop status/intake, post_tool_use image observations
 └── skills/
     ├── doc-craft/            # Reader-first writing rules, templates, Mermaid rules, checklist
     ├── doc-inquiry/          # Fact ownership per sibling, inquiry records, interview bank

@@ -1,4 +1,4 @@
-"""Reject writes to the doc-lint report.
+"""Reject writes to doc-lint reports and generated vision evidence.
 
 doc-lint.json is the verdict doc_lint.py computes over a doc brief and its
 target documents; the Stop hook trusts it to decide whether the documents are
@@ -6,8 +6,8 @@ finished. Only doc_lint.py may write it, so hand edits (or a fabricated
 "pass") are rejected. The documents and the brief themselves stay editable.
 
 Only path-bearing arguments decide the verdict: file bodies such as
-file_text/new_str may legitimately mention the report name, so payload content
-is never scanned. For the terminal, writes are detected from shell-level
+file_text/new_str may legitimately mention a protected path, so payload
+content is never scanned. For the terminal, writes are detected from shell-level
 operators (redirects, tee, cp/mv destinations, dd, sed -i, rm, mkdir, chmod,
 ...) instead of any mention of a protected path, so read-only commands like
 `cat` or `grep` on the report are allowed.
@@ -26,6 +26,14 @@ WRITE_TOOLS = {"file_editor", "apply_patch"}
 VIEW_ACTIONS = {"view", "read", "undo_edit"}
 WRITE_ACTIONS = {"create", "str_replace", "insert", "edit", "write"}
 PATH_KEYS = ("path", "file_path", "paths", "target_file", "old_path", "new_path")
+PATCH_PATH_PREFIXES = (
+    "*** Update File:",
+    "*** Add File:",
+    "*** Delete File:",
+    "*** Move to:",
+    "+++ b/",
+    "--- a/",
+)
 COMMAND_SEPARATORS = {"|", "||", "&&", "&", ";", "(", ")"}
 WRAPPER_COMMANDS = {
     "sudo",
@@ -70,10 +78,28 @@ def _path_values(tool_input: dict[str, Any]) -> list[str]:
     return values
 
 
+def _patch_path_values(tool_input: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for value in _strings(tool_input):
+        for line in value.splitlines():
+            for prefix in PATCH_PATH_PREFIXES:
+                if line.startswith(prefix):
+                    paths.append(line.removeprefix(prefix).strip())
+                    break
+    return paths
+
+
 def _is_protected(value: str) -> bool:
     normalized = value.replace("\\", "/").lower()
-    base = normalized.rsplit("/", 1)[-1]
-    return base in ARTIFACT_NAMES
+    parts = tuple(part for part in normalized.strip("/").split("/") if part)
+    base = parts[-1] if parts else ""
+    if base in ARTIFACT_NAMES:
+        return True
+    return (
+        len(parts) >= 3
+        and parts[-3:-1] == ("observations", "doc")
+        and parts[-1].endswith(".jsonl")
+    ) or (len(parts) >= 3 and parts[-3:] == ("intake", "attachments", "manifest.jsonl"))
 
 
 def _is_artifact_write(payload: dict[str, Any]) -> bool:
@@ -85,7 +111,7 @@ def _is_artifact_write(payload: dict[str, Any]) -> bool:
         return False
     tool_input = cast(dict[str, Any], tool_input)
     if tool_name == "apply_patch":
-        return any(_is_protected(value) for value in _strings(tool_input))
+        return any(_is_protected(value) for value in _patch_path_values(tool_input))
     if not any(_is_protected(value) for value in _path_values(tool_input)):
         return False
     action = tool_input.get("command") or tool_input.get("action")
@@ -204,15 +230,16 @@ def main() -> int:
     payload = cast(dict[str, Any], payload)
     if _is_artifact_write(payload):
         print(
-            "doc-lint.json is written only by doc_lint.py; rerun the linter"
-            " instead of editing the report",
+            "generated reports and vision evidence are hook-managed; use their"
+            " producer instead of editing them",
             file=sys.stderr,
         )
         return 2
     target = _is_terminal_write(payload)
     if target is not None:
         print(
-            f"doc-lint.json may not be written through the terminal: {target}",
+            f"generated report or vision evidence may not be written "
+            f"through the terminal: {target}",
             file=sys.stderr,
         )
         return 2
