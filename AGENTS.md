@@ -81,6 +81,9 @@ tests/                        # Linter, hook, and plugin-asset tests
   writes `doc-work/<slug>/context.md`, and the sub-agents read the workspace.
 - Do not import sibling plugin code. Cooperate through shared-workspace
   artifacts and the siblings' registered agents.
+- Shared hooks are canonical across the family; change all 9 copies together
+  and update `EXPECTED` in `scripts/check_shared_hooks.py`.
+- `intake_attachments.py` and `record_*` hooks are intentionally repo-specific.
 - Sub-agents do not inherit plugin hooks; agent frontmatter repeats the
   `pre_tool_use` hooks from `hooks/hooks.json` verbatim.
 - AgentDefinitions do not declare `skills:`; prompts reference SKILL.md paths
