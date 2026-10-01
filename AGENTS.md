@@ -111,3 +111,5 @@ Write commit messages in English. Do not use `git add .`, amend commits,
 `--no-verify`, force push, direct pushes to main, `reset --hard`, `clean -fd`,
 `checkout -- file`, or `stash drop`. Do not commit `doc-work/`, `out/`,
 secrets, or environment files. Use `git mv` when renaming files.
+
+Shared workflows are canonical across the family; change all 11 copies together and update `EXPECTED` in `scripts/check_shared_workflows.py`.
