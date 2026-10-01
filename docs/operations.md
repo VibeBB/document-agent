@@ -94,3 +94,9 @@ python3 plugins/doc/skills/doc-lint/scripts/doc_lint.py --brief doc-work/<slug>/
 tool pins) into a "Dependency update check report" issue. Deferrals with
 reasons and re-check deadlines live in
 `scripts/dependency_update_deferrals.json`.
+Fetch failures are reported as unknown and keep the issue open until they
+resolve.
+
+## CI runner network auditing
+
+CI and image-publishing jobs use `step-security/harden-runner` in audit-only mode. It observes network egress without blocking requests; per-run insights are available in the GitHub Actions job summary.

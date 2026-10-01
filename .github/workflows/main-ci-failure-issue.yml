@@ -8,6 +8,7 @@ on:
       - "Dependency update check"
       - "PR branch cleanup"
       - "Release"
+      - "Scorecard"
       - "Workflow lint"
     types: [completed]
     branches: [main]
@@ -24,9 +25,10 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
-      actions: read  # reads the completed run's jobs
-      contents: read # reads the completed run's jobs via the Actions API
-      issues: write # files/closes the ci-main-failure tracking issue
+      actions: read # reads the completed run's jobs
+      contents: read
+      # Files, comments on, and closes the main CI failure tracking issue.
+      issues: write
     steps:
       - name: Update tracking issue
         env:
@@ -37,12 +39,13 @@ jobs:
         run: |
           set -euo pipefail
           gh label create ci-main-failure --repo "$GITHUB_REPOSITORY" --color B60205 \
-            --description "main CI verification is failing" --force || true
+            --description "a main-branch workflow is failing" --force || true
           issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label ci-main-failure \
             --json number --jq '.[0].number // empty')
           if [ "$CONCLUSION" = success ]; then
             if [ -n "$issue" ]; then
-              gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "Back to green: $RUN_URL"
+              gh issue close "$issue" --repo "$GITHUB_REPOSITORY" \
+                --comment "Back to green: $RUN_URL"
             fi
             exit 0
           fi
@@ -51,7 +54,7 @@ jobs:
           fi
           jobs=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json jobs \
             --jq '[.jobs[] | select(.conclusion=="failure") | .name] | join(", ")')
-          body=$(printf '%s\n\n- run: %s\n- failed jobs: %s\n' "main CI verification failed." "$RUN_URL" "${jobs:-unknown}")
+          body=$(printf '%s\n\n- run: %s\n- failed jobs: %s\n' "A main-branch workflow failed." "$RUN_URL" "${jobs:-unknown}")
           if [ -n "$issue" ]; then
             gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
           else
