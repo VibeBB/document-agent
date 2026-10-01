@@ -10,6 +10,7 @@
 | [`doc-brief-contract.md`](doc-brief-contract.md) | Canonical `doc-brief.json` and `doc-lint.json` contract |
 | [`operations.md`](operations.md) | Release process, plugin update notes, verification recipes |
 | [`research/sdk-v1.50.0-feature-evaluation.md`](research/sdk-v1.50.0-feature-evaluation.md) | OpenHands SDK v1.50.0 and uv 0.12.21 adoption review |
+| [`research/sdk-v1.50.1-feature-evaluation.md`](research/sdk-v1.50.1-feature-evaluation.md) | OpenHands SDK v1.50.1 adoption decisions |
 
 ## Accepted ADR list
 
