@@ -308,6 +308,7 @@ def check_github_actions(
     statuses: list[DependencyStatus] = []
     uvx_statuses: list[DependencyStatus] = []
     seen: set[str] = set()
+    seen_uvx: set[tuple[str, str]] = set()
     for workflow in workflow_files(repo_root):
         text = workflow.read_text(encoding="utf-8")
         for repo, _sha, comment in _ACTION.findall(text):
@@ -332,6 +333,11 @@ def check_github_actions(
                 )
             )
         for tool, pin in _UVX.findall(text):
+            # A tool pinned on several lines (e.g. a SARIF run plus a gate
+            # run) must not render one report row per matching line.
+            if (tool, pin) in seen_uvx:
+                continue
+            seen_uvx.add((tool, pin))
             try:
                 latest = _pypi_latest(tool, _default_fetch_json)
             except (ValueError, OSError):
