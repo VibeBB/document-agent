@@ -19,7 +19,7 @@ that a first-time user understands, a user manual, and a technical reference
 for engineers. When it does not know something, it asks the sibling agent that
 designed that part — and, when only you can answer, it interviews you.
 
-> Target: OpenHands Software Agent SDK v1.50.1 / OpenHands Agent Canvas
+> Target: OpenHands Software Agent SDK v1.51.0 / OpenHands Agent Canvas
 
 ### What it writes
 
@@ -98,10 +98,11 @@ inspection records) are planned; their kinds are reserved in the contract
    | Path | `plugins/doc` |
 
 3. Installation is complete when **doc** appears as enabled.
-4. Optionally enable sub-agents (`enable_sub_agents`) so doc can split the
-   work into liaison, writer, and reviewer and ask sibling agents. It also
-   works without them (see the fallback in
-   [docs/operations.md](docs/operations.md)).
+4. Optionally enable sub-agents by adding `task_tool_set` to the agent
+   profile's `tools` so doc can split the work into liaison, writer, and
+   reviewer and ask sibling agents. (`enable_sub_agents` is deprecated since
+   SDK 1.51.0 and folds into the same tool.) doc also works without them
+   (see the fallback in [docs/operations.md](docs/operations.md)).
 
 For a non-GUI installation, place `plugins/doc` in the project directory
 (`$OPENHANDS_PROJECT_DIR/plugins/doc`), point `DOC_PLUGIN_ROOT` at the plugin
@@ -159,7 +160,7 @@ BSD-3-Clause — see [LICENSE](LICENSE) and
 分からないことは、その部分を設計した姉妹エージェントに聞きます。
 あなたにしか答えられないこと（製品への想いなど）は、あなたにインタビューします。
 
-> 対象: OpenHands Software Agent SDK v1.50.1 / OpenHands Agent Canvas
+> 対象: OpenHands Software Agent SDK v1.51.0 / OpenHands Agent Canvas
 
 ### 作るドキュメント
 
@@ -205,7 +206,8 @@ BSD-3-Clause — see [LICENSE](LICENSE) and
 Agent Canvas の **Customize** → **Plugins** → **Add plugin** で、Source に
 `github:VibeBB/document-agent`、Ref に最新タグ（または `main`）、Path に
 `plugins/doc` を入力して **Install** します。姉妹エージェントへの問い合わせを
-使うには sub-agents（`enable_sub_agents`）を有効にします。無効でも動作します。
+使うにはプロファイルの `tools` に `task_tool_set` を追加します（SDK 1.51.0 以降
+`enable_sub_agents` は非推奨で、同じツールに展開されます）。無効でも動作します。
 
 品質文書（品質計画書、試験成績書、リスクアセスメント、検査記録）の作成は
 今後対応予定で、契約上の種別は予約済みです。

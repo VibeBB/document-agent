@@ -11,6 +11,7 @@
 | [`operations.md`](operations.md) | Release process, plugin update notes, verification recipes |
 | [`research/sdk-v1.50.0-feature-evaluation.md`](research/sdk-v1.50.0-feature-evaluation.md) | OpenHands SDK v1.50.0 and uv 0.12.21 adoption review |
 | [`research/sdk-v1.50.1-feature-evaluation.md`](research/sdk-v1.50.1-feature-evaluation.md) | OpenHands SDK v1.50.1 adoption decisions |
+| [`research/sdk-v1.51.0-feature-evaluation.md`](research/sdk-v1.51.0-feature-evaluation.md) | OpenHands SDK v1.51.0 and uv 0.12.22 adoption review |
 
 ## Accepted ADR list
 

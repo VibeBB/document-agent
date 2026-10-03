@@ -41,9 +41,11 @@ curl -sS -H "X-Session-API-Key: $KEY" http://127.0.0.1:8000/api/plugins/installe
 
 `/doc:write` uses `task` only when it is in the conversation's tool list.
 Otherwise it runs the liaison, writer, and review stages in the parent
-conversation and says so on its final `Path: fallback (no task)` line. With
-SDK 1.49.x, `enable_sub_agents` adds `task` only when the agent profile's
-`tools` is unspecified; if `tools` is set explicitly, add `task_tool_set`.
+conversation and says so on its final `Path: fallback (no task)` line. Since
+SDK 1.51.0, the profile's `tools` is the only tool control: add
+`task_tool_set` there. The retired `enable_sub_agents` and
+`enable_switch_llm_tool` switches still fold into `tools` with a deprecation
+warning until they are removed in SDK 1.56.0.
 
 Sibling inquiries through `task` need the sibling plugin installed in the
 same Agent Canvas. `/doc:doctor` lists which siblings it can see; missing
