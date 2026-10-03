@@ -8,7 +8,11 @@ product overview see the [README](../README.md).
 
 Run the `release` workflow manually with `workflow_dispatch`. Select a `bump`
 input (`patch`/`minor`/`major`, defaulting to `patch`) or a `version` input
-(an explicit `X.Y.Z` override). It runs only on `main`:
+(an explicit `X.Y.Z` override). Setting `dry_run` rehearses the pipeline:
+it validates the version arithmetic and runs verify, install-smoke, and the
+release build against HEAD, but commits nothing, pushes nothing, and skips
+the tag and Release — use it to exercise the workflow before a real release.
+It runs only on `main`:
 
 1. **bump-version** — `scripts/bump_version.py` checks the versions in
    `plugins/doc/.plugin/plugin.json`, `pyproject.toml`, the `doc-lint` and
@@ -98,6 +102,22 @@ reasons and re-check deadlines live in
 `scripts/dependency_update_deferrals.json`.
 Fetch failures are reported as unknown and keep the issue open until they
 resolve.
+
+## Repository settings the CI design assumes
+
+- **Dependency graph** must stay enabled (Settings → Advanced security);
+  `dependency-review.yml` fails with "not supported on this repository"
+  without it. The check is intentionally not required — it only reports on
+  `pull_request` events.
+- **Required checks** are `verify (3.12)`, `verify (3.13)`, `plugin-load`,
+  and `zizmor`. No `pull_request` trigger may gain a paths filter, or a
+  required check can be skipped and auto-merge stalls.
+- **"Allow GitHub Actions to create and approve pull requests"** must stay
+  on: the release workflow's fallback path opens and auto-merges a
+  version-bump PR when direct push is rejected.
+- The branch ruleset requires **0 approving reviews** by design (solo
+  maintainer plus bot auto-merge, including the unattended release
+  fallback). Raising it makes release auto-merge PRs need human approval.
 
 ## CI runner network auditing
 

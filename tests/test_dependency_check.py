@@ -77,6 +77,26 @@ def test_render_markdown_groups_by_surface(dep_check: Any) -> None:
     assert "update candidates: 1" in markdown
 
 
+def test_uvx_statuses_deduplicated_on_name_and_pin(
+    dep_check: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    workflow = tmp_path / "lint.yml"
+    workflow.write_text(
+        "- run: uvx zizmor@1.30.1 --format sarif .\n"
+        "- run: uvx zizmor@1.30.1 --format plain .\n"
+        "- run: uvx zizmor@1.29.0 --format plain .\n"
+        "- run: uvx ruff@0.1.0 check .\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dep_check, "workflow_files", lambda _root: [workflow])
+    monkeypatch.setattr(
+        dep_check, "_default_fetch_json", lambda _url: {"info": {"version": "9.9.9"}}
+    )
+    statuses = dep_check.check_github_actions(tmp_path, list_remote_tags=lambda _u: [])
+    uvx = [(s.name, s.current) for s in statuses if s.surface == "pypi-uvx"]
+    assert uvx == [("zizmor", "1.30.1"), ("zizmor", "1.29.0"), ("ruff", "0.1.0")]
+
+
 def test_apply_deferrals_marks_matching_outdated(
     dep_check: Any, tmp_path: Path
 ) -> None:
