@@ -86,12 +86,12 @@ jobs:
         continue-on-error: true
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache-suffix: install-smoke
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         if: steps.setup-uv-1.outcome == 'failure'
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache-suffix: install-smoke
       - name: Sync dependencies
         run: uv sync --locked --group sdk-check
@@ -124,12 +124,12 @@ jobs:
         continue-on-error: true
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache-suffix: release
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         if: steps.setup-uv-2.outcome == 'failure'
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache-suffix: release
       - name: Sync dependencies
         run: uv sync --locked
