@@ -52,7 +52,14 @@ jobs:
         # UV_PYTHON_INSTALL_DIR lands under _temp on the hosted image,
         # outside the uv dependency cache, so each leg re-downloaded CPython.
         run: echo "UV_PYTHON_INSTALL_DIR=$RUNNER_TEMP/uv-python" >> "$GITHUB_ENV"
+      - id: setup-uv-1
+        continue-on-error: true
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache-suffix: verify-${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        if: steps.setup-uv-1.outcome == 'failure'
         with:
           python-version: ${{ matrix.python-version }}
           cache-suffix: verify-${{ matrix.python-version }}
@@ -109,7 +116,14 @@ jobs:
           key: uv-python-${{ runner.os }}-3.12
       - name: Point uv Python installs at the cached path
         run: echo "UV_PYTHON_INSTALL_DIR=$RUNNER_TEMP/uv-python" >> "$GITHUB_ENV"
+      - id: setup-uv-2
+        continue-on-error: true
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          cache-suffix: plugin-load
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        if: steps.setup-uv-2.outcome == 'failure'
         with:
           python-version: "3.12"
           cache-suffix: plugin-load
