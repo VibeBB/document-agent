@@ -77,6 +77,99 @@ def test_render_markdown_groups_by_surface(dep_check: Any) -> None:
     assert "update candidates: 1" in markdown
 
 
+def test_action_statuses_strip_subpath_actions(
+    dep_check: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    workflow = tmp_path / "lint.yml"
+    sha = "2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2"
+    workflow.write_text(
+        f"- uses: github/codeql-action/upload-sarif@{sha} # v4.38.2\n"
+        "- uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dep_check, "workflow_files", lambda _root: [workflow])
+    urls: list[str] = []
+
+    def tags(url: str) -> list[str]:
+        urls.append(url)
+        return []
+
+    statuses = dep_check.check_github_actions(tmp_path, list_remote_tags=tags)
+    assert {s.name for s in statuses} == {
+        "github/codeql-action",
+        "actions/checkout",
+    }
+    assert set(urls) == {
+        "https://github.com/github/codeql-action",
+        "https://github.com/actions/checkout",
+    }
+
+
+def test_every_sha_pinned_workflow_action_is_tracked(dep_check: Any) -> None:
+    statuses = dep_check.check_github_actions(REPO_ROOT, list_remote_tags=lambda _u: [])
+    tracked = {s.name for s in statuses if s.surface == "github-actions"}
+    pinned = set()
+    for workflow in dep_check.workflow_files(REPO_ROOT):
+        for uses_path, _sha, _comment in dep_check._ACTION.findall(
+            workflow.read_text(encoding="utf-8")
+        ):
+            pinned.add(dep_check._action_repo(uses_path))
+    assert pinned <= tracked
+    assert "github/codeql-action" in tracked
+
+
+def test_workflow_downloads_track_wheel_tarball_and_trivy(
+    dep_check: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    workflow = tmp_path / "lint.yml"
+    workflow.write_text(
+        "- name: actionlint\n"
+        "  run: |\n"
+        '    curl "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz"\n'
+        "- name: wheel\n"
+        "  run: |\n"
+        '    wheel="zizmor-1.30.1-py3-none-manylinux_2_28_x86_64.whl"\n'
+        '    curl "https://files.pythonhosted.org/packages/ab/cd/$wheel"\n'
+        "- uses: aquasecurity/trivy-action@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2\n"
+        "  with:\n"
+        "    version: 0.58.0\n"
+        "- uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dep_check, "workflow_files", lambda _root: [workflow])
+
+    def fetch_json(_url: str) -> Any:
+        return {"info": {"version": "9.9.9"}}
+
+    def tags(url: str) -> list[str]:
+        return {
+            "https://github.com/rhysd/actionlint": ["v1.7.12"],
+            "https://github.com/aquasecurity/trivy": ["v0.58.0"],
+        }.get(url, [])
+
+    statuses = dep_check.check_workflow_downloads(
+        tmp_path, fetch_json=fetch_json, list_remote_tags=tags
+    )
+    assert {(s.name, s.current) for s in statuses} == {
+        ("zizmor", "1.30.1"),
+        ("rhysd/actionlint", "v1.7.12"),
+        ("aquasecurity/trivy", "0.58.0"),
+    }
+    assert all(s.surface == "direct-download" for s in statuses)
+
+
+def test_workflow_downloads_cover_repo_pins(dep_check: Any) -> None:
+    def fetch_json(_url: str) -> Any:
+        return {"info": {"version": "9.9.9"}}
+
+    statuses = dep_check.check_workflow_downloads(
+        REPO_ROOT, fetch_json=fetch_json, list_remote_tags=lambda _u: ["v9.9.9"]
+    )
+    rows = {(s.name, s.current) for s in statuses}
+    assert ("zizmor", "1.30.1") in rows
+    assert ("rhysd/actionlint", "v1.7.12") in rows
+
+
 def test_uvx_statuses_deduplicated_on_name_and_pin(
     dep_check: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

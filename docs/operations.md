@@ -24,8 +24,9 @@ It runs only on `main`:
 3. **install-smoke** — `scripts/smoke_install_plugin.py` installs from the
    target SHA with `install_plugin` and checks agents, skills, commands, and
    hooks.
-4. **release** — lints the shipped example, zips `plugins/doc` (with
-   `LICENSE` and `THIRD_PARTY_NOTICES.md`), and creates the tag and Release.
+4. **release** — zips `plugins/doc` (with `LICENSE` and
+   `THIRD_PARTY_NOTICES.md`), and creates the tag and Release. (The shipped
+   examples are linted by the verify job at the same SHA.)
 
 If any step fails, neither a tag nor a Release is created.
 
@@ -96,12 +97,20 @@ python3 plugins/doc/skills/doc-lint/scripts/doc_lint.py --brief doc-work/<slug>/
 
 `.github/workflows/check-dependency-updates.yml` runs
 `scripts/check_dependency_updates.py` weekly and aggregates update candidates
-(PyPI direct/lock drift, the uv pin, Python minor, GitHub Actions pins, uvx
-tool pins) into a "Dependency update check report" issue. Deferrals with
-reasons and re-check deadlines live in
+(PyPI direct/lock drift, the uv pin, Python minor, GitHub Actions pins
+including subpath actions like `github/codeql-action/upload-sarif`, uvx tool
+pins, and direct-download pins such as the zizmor wheel, the actionlint
+release tarball, and trivy `version:` inputs) into a "Dependency update check
+report" issue. Deferrals with reasons and re-check deadlines live in
 `scripts/dependency_update_deferrals.json`.
 Fetch failures are reported as unknown and keep the issue open until they
 resolve.
+
+The workflow also runs on pull requests that touch the collector's files
+(the script, its tests, the deferrals file, or the workflow itself) and on
+`workflow_dispatch` with `report_only: true`; in both cases it writes the
+report to the step summary and a `dependency-update-report` artifact and
+skips the tracking-issue update.
 
 ## Repository settings the CI design assumes
 
