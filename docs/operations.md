@@ -14,12 +14,16 @@ release build against HEAD, but commits nothing, pushes nothing, and skips
 the tag and Release — use it to exercise the workflow before a real release.
 It runs only on `main`:
 
-1. **bump-version** — `scripts/bump_version.py` checks the versions in
+1. **bump-version** — `scripts/release_bump.sh` drives the state machine:
+   `scripts/bump_version.py` checks the versions in
    `plugins/doc/.plugin/plugin.json`, `pyproject.toml`, the `doc-lint` and
    `doc-craft` `SKILL.md` files, and `uv.lock`, writes the new version, and
    checks that the `v<version>` tag does not exist. When the ruleset rejects
    a direct push to main, the bump goes through an auto-merged pull request.
    An explicit `version` equal to the current version releases `main` HEAD.
+   The script's branches are covered by `tests/test_release_bump.py`, which
+   stubs `gh`/`git` and rehearses dry-run, direct-push, and PR-fallback
+   flows.
 2. **verify** — the normal CI through the reusable workflow.
 3. **install-smoke** — `scripts/smoke_install_plugin.py` installs from the
    target SHA with `install_plugin` and checks agents, skills, commands, and
