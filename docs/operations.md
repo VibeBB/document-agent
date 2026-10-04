@@ -131,3 +131,21 @@ skips the tracking-issue update.
 ## CI runner network auditing
 
 CI and image-publishing jobs use `step-security/harden-runner` in audit-only mode. It observes network egress without blocking requests; per-run insights are available in the GitHub Actions job summary.
+
+## Settings-level posture (recorded decisions)
+
+The following live in repository Settings rather than code; they are
+intentional for the solo-maintainer bot-merge workflow and are recorded
+here so audits do not re-flag them:
+
+- Branch protection does not require approving reviews, code owners, or
+  "apply to administrators": every merge is performed by automation
+  (digest-lock, version-bump, and Devin PRs), so required approvers would
+  only add friction to a pipeline that already gates on the required-check
+  set. OpenSSF Scorecard reports this as Branch-Protection 3 and
+  Code-Review 0; that is the recorded trade-off, not an oversight.
+- The Dependency graph must stay enabled for `dependency-review.yml` to
+  evaluate pull requests.
+- `release.yml` is dispatch-only; run it once with `dry_run=true` before
+  the first real release to rehearse bump, verify, and install-smoke
+  without creating a GitHub release.
