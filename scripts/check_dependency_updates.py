@@ -480,10 +480,19 @@ def check_python_versions(
     values.append(
         (f"{requires_match.group(1)}.{requires_match.group(2)}", "pyproject.toml")
     )
-    ci = repo_root / ".github" / "workflows" / "ci.yml"
-    if ci.is_file():
-        for minor in re.findall(r'"3\.(\d+)"', ci.read_text(encoding="utf-8")):
-            values.append((f"3.{minor}", "ci.yml"))
+    dotfile = repo_root / ".python-version"
+    if dotfile.is_file():
+        match = re.search(r"(\d+\.\d+)", dotfile.read_text(encoding="utf-8"))
+        if match is not None:
+            values.append((match.group(1), ".python-version"))
+    for workflow in workflow_files(repo_root):
+        text = workflow.read_text(encoding="utf-8")
+        # Quoted "3.x" strings catch matrix entries and scalar pins alike;
+        # the unquoted pattern covers `python-version: 3.x` inputs.
+        minors = {f"3.{minor}" for minor in re.findall(r'"3\.(\d+)"', text)}
+        minors.update(re.findall(r"python-version:\s*(\d+\.\d+)", text))
+        for minor in sorted(minors):
+            values.append((minor, workflow.name))
     tags = list_remote_tags("https://github.com/python/cpython")
     stable_minors = sorted(
         {

@@ -118,7 +118,7 @@ skips the tracking-issue update.
   `dependency-review.yml` fails with "not supported on this repository"
   without it. The check is intentionally not required — it only reports on
   `pull_request` events.
-- **Required checks** are `verify (3.12)`, `verify (3.13)`, `plugin-load`,
+- **Required checks** are `verify (3.12)`, `verify (3.13)`, `verify (3.14)`, `plugin-load`,
   and `zizmor`. No `pull_request` trigger may gain a paths filter, or a
   required check can be skipped and auto-merge stalls.
 - **"Allow GitHub Actions to create and approve pull requests"** must stay
