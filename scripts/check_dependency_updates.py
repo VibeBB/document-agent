@@ -4,9 +4,13 @@
 Surfaces checked: direct/dev PyPI dependencies (compared against the
 resolved versions in uv.lock), uv.lock transitive drift via
 `uv lock --upgrade --dry-run`, the uv required-version pin, GitHub Actions
-`uses:` pins (40-char SHA + version comment), `uvx` tool pins in workflows,
-and the Python minor versions referenced by the repo (pyproject
-requires-python, CI matrix) against the latest stable CPython minor.
+`uses:` pins (40-char SHA + version comment, including subpath actions
+such as `github/codeql-action/upload-sarif`), `uvx` tool pins in
+workflows, direct-download pins in workflows (PyPI wheel filenames,
+github.com release-asset URLs, and trivy `version:` inputs on
+aquasecurity actions), and the Python minor versions referenced by the
+repo (pyproject requires-python, CI matrix) against the latest stable
+CPython minor.
 
 Renders a per-surface markdown report (and optionally JSON). Deferrals live
 in scripts/dependency_update_deferrals.json; see docs/operations.md for the
@@ -37,6 +41,7 @@ DEPENDENCY_SURFACES = (
     "python-version",
     "github-actions",
     "pypi-uvx",
+    "direct-download",
 )
 
 FetchJson = Callable[[str], Any]
@@ -286,8 +291,16 @@ def workflow_files(repo_root: Path) -> list[Path]:
     return sorted(directory.glob("*.yml")) + sorted(directory.glob("*.yaml"))
 
 
-_ACTION = re.compile(r"uses:\s*([\w.-]+/[\w.-]+)@([0-9a-f]{40})(?:\s*#\s*(v[\w.-]+))?")
+# Action paths may carry subdirectories (owner/repo/sub/path@sha); the
+# remote version lookup only ever needs the first two segments.
+_ACTION = re.compile(
+    r"uses:\s*([\w.-]+/[\w.-]+(?:/[\w.-]+)*)@([0-9a-f]{40})(?:\s*#\s*(v[\w.-]+))?"
+)
 _UVX = re.compile(r"uvx\s+([\w.-]+)@([\w.]+)")
+
+
+def _action_repo(uses_path: str) -> str:
+    return "/".join(uses_path.split("/")[:2])
 
 
 def _github_latest_tag(repo: str, list_remote_tags: ListRemoteTags) -> str:
@@ -311,7 +324,8 @@ def check_github_actions(
     seen_uvx: set[tuple[str, str]] = set()
     for workflow in workflow_files(repo_root):
         text = workflow.read_text(encoding="utf-8")
-        for repo, _sha, comment in _ACTION.findall(text):
+        for uses_path, _sha, comment in _ACTION.findall(text):
+            repo = _action_repo(uses_path)
             if repo in seen:
                 continue
             seen.add(repo)
@@ -355,6 +369,90 @@ def check_github_actions(
                 )
             )
     return statuses + uvx_statuses
+
+
+# Workflow steps also pin tools by downloading them directly: wheel files
+# from files.pythonhosted.org, release tarballs from github.com
+# releases/download URLs, and trivy binaries via the `version:` input of
+# aquasecurity actions. These pins sit outside `uses:`/`uvx` and need
+# their own tracking.
+_GH_DOWNLOAD = re.compile(
+    r"github\.com/([\w.-]+/[\w.-]+)/releases/download/(v[\w.-]+)/"
+)
+_WHEEL = re.compile(r"\b([A-Za-z0-9][\w.]*?)-(\d+\.\d+\.\d+)-py3[^\s'\"]*\.whl")
+_TRIVY_USES = re.compile(
+    r"uses:\s*aquasecurity/(?:trivy-action|setup-trivy)@[0-9a-f]{40}"
+)
+_TRIVY_VERSION = re.compile(r"^\s*version:\s*[\"']?v?(\d+\.\d+\.\d+)", re.M)
+_STEP_START = re.compile(r"^\s*- (?:name|uses|run):", re.M)
+
+
+def _trivy_pins(text: str) -> list[str]:
+    """`version:` inputs inside each aquasecurity trivy step's `with:` block."""
+    pins: list[str] = []
+    for match in _TRIVY_USES.finditer(text):
+        boundary = _STEP_START.search(text, match.end())
+        window = text[match.end() : boundary.start() if boundary else None]
+        version = _TRIVY_VERSION.search(window)
+        if version is not None:
+            pins.append(version.group(1))
+    return pins
+
+
+def check_workflow_downloads(
+    repo_root: Path,
+    *,
+    fetch_json: FetchJson = _default_fetch_json,
+    list_remote_tags: ListRemoteTags = _default_list_remote_tags,
+) -> list[DependencyStatus]:
+    statuses: list[DependencyStatus] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(name: str, current: str, latest: str, source: str, outdated: bool) -> None:
+        if (name, current) in seen:
+            return
+        seen.add((name, current))
+        statuses.append(
+            DependencyStatus(
+                "direct-download",
+                name,
+                current,
+                latest or "?",
+                source,
+                outdated,
+                "" if latest else "fetch failed",
+                fetch_failed=not latest,
+            )
+        )
+
+    for workflow in workflow_files(repo_root):
+        text = workflow.read_text(encoding="utf-8")
+        source = f".github/workflows/{workflow.name}"
+        for name, version in _WHEEL.findall(text):
+            try:
+                latest = _pypi_latest(name, fetch_json)
+            except (ValueError, OSError):
+                latest = ""
+            add(
+                normalize_name(name),
+                version,
+                latest,
+                source,
+                bool(latest) and latest != version,
+            )
+        for repo, tag in _GH_DOWNLOAD.findall(text):
+            latest = _github_latest_tag(repo, list_remote_tags)
+            add(repo, tag, latest, source, bool(latest) and latest != tag)
+        for version in _trivy_pins(text):
+            latest = _github_latest_tag("aquasecurity/trivy", list_remote_tags)
+            add(
+                "aquasecurity/trivy",
+                version,
+                latest,
+                source,
+                bool(latest) and latest.lstrip("v") != version.lstrip("v"),
+            )
+    return statuses
 
 
 _PYTHON_TAG_RE = re.compile(r"v(\d+)\.(\d+)\.\d+")
@@ -515,6 +613,9 @@ def check_dependency_updates(
         *check_pypi_lock(repo_root, direct_names, run_uv=run_uv),
         *check_uv_pin(repo_root, fetch_json=fetch_json),
         *check_github_actions(repo_root, list_remote_tags=cached_tags),
+        *check_workflow_downloads(
+            repo_root, fetch_json=fetch_json, list_remote_tags=cached_tags
+        ),
         *check_python_versions(repo_root, list_remote_tags=cached_tags),
     ]
 
@@ -527,6 +628,7 @@ def render_markdown(statuses: list[DependencyStatus]) -> str:
         "python-version": "Python version",
         "github-actions": "GitHub Actions",
         "pypi-uvx": "PyPI (uvx tool pins in workflows)",
+        "direct-download": "Direct downloads (workflow-pinned artifacts)",
     }
     lines = ["# Dependency update check report", ""]
     for surface, label in labels.items():

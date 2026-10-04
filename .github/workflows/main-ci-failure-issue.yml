@@ -5,7 +5,6 @@ on:
   workflow_run:
     workflows:
       - "CI"
-      - "Container hardening audit"
       - "Dependency update check"
       - "PR branch cleanup"
       - "Release"

@@ -1,6 +1,13 @@
 {
   "deferrals": [
     {
+      "surface": "uv-pin",
+      "name": "uv",
+      "latest": "0.12.23",
+      "review_by": "2026-11-04",
+      "reason": "uv required-version bumps ride the scheduled family dependency-update fan-out (deps-update workflow), not ad-hoc PRs. Re-evaluate if the next scheduled update has not landed by the review date."
+    },
+    {
       "surface": "python-version",
       "name": "*",
       "latest": "3.14",

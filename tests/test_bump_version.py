@@ -128,6 +128,14 @@ def test_uv_lock_other_versions_untouched(tmp_path: Path) -> None:
     assert 'name = "document-agent"\nversion = "0.1.1"' in lock
 
 
+def test_list_files(tmp_path: Path) -> None:
+    # The release workflow stages this list; it must stay exactly the set
+    # bump_version.py can rewrite (VERSION_FILES + uv.lock).
+    proc = _run("--list-files")
+    assert proc.returncode == 0
+    assert proc.stdout.strip().splitlines() == FILES
+
+
 def test_github_output(tmp_path: Path) -> None:
     root = _make_repo(tmp_path)
     out = tmp_path / "ghout"
