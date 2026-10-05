@@ -1,5 +1,7 @@
 # document-agent
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/VibeBB/document-agent)
+
 Part of the [VibeBB](https://github.com/VibeBB) agent family:
 [bard-agent](https://github.com/VibeBB/bard-agent) ·
 [electrical-circuit-agent](https://github.com/VibeBB/electrical-circuit-agent) ·
