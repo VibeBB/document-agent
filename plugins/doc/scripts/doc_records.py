@@ -59,9 +59,9 @@ def _closed(
 ) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{label} must be an object")
-    obj = cast(dict[str, Any], value)
-    if any(not isinstance(key, str) for key in obj):
+    if any(not isinstance(key, str) for key in value):
         raise ValueError(f"{label} keys must be strings")
+    obj = cast(dict[str, Any], value)
     unknown = sorted(set(obj) - required - optional)
     missing = sorted(required - set(obj))
     if unknown:
@@ -305,7 +305,7 @@ def record_vision_review(value: object, root: Path | None = None) -> dict[str, A
         findings.append(
             {
                 "category": _string(finding["category"], f"findings[{index}].category"),
-                "severity": cast(str, severity),
+                "severity": severity,
                 "note": _string(finding["note"], f"findings[{index}].note"),
             }
         )

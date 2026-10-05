@@ -15,6 +15,6 @@ scripts, tests, workflows) before the VibeBB Record Protocol / Sister Liaison Pr
 | 8 | Hooks | `protect-lint-report` resolver missed the `~/.agents/plugins/doc` install location. | [done] Add the candidate to every resolver. |
 | 9 | Wording | "sibling" in prompts, docs and output; the family term is "sister". | [done] Rename prose and brief source kinds. |
 | 10 | Docs | operations.md described Python 3.14 as a required check; AGENTS.md counted 9 shared-hook copies. | [done] Correct both. |
-| 11 | Docs | No architecture/agents/hooks/MCP reference; README mixed product and developer content. | [pending] Rebuild README for non-engineers and a complete technical doc set. |
+| 11 | Docs | No architecture/agents/hooks/MCP reference; README mixed product and developer content. | [done] Rebuild README for non-engineers and a complete technical doc set. |
 | 12 | Rendering | Pages and Mermaid diagrams cannot be rendered to images without a tools image (doc is stdlib-only on the host). | Open: needs a pinned rendering image or a sister renderer; recorded as a gap. |
 | 13 | Liaison safety | Hand edits to `liaison/*.ux-response.json` are not blocked, because the directory is shared by every sister and a doc hook must not block other sisters. | Open: needs a family-wide owner-aware guard. |

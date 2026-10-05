@@ -22,6 +22,8 @@ required-version = "==0.12.23"
 
 [tool.ruff]
 line-length = 88
+# Canonical shared copies are guarded by scripts/check_shared_hooks.py.
+extend-exclude = ["plugins/doc/hooks/scripts/_records.py", "plugins/doc/hooks/scripts/require_records.py"]
 target-version = "py312"
 src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plugins/doc/scripts", "scripts", "tests"]
 
@@ -33,6 +35,7 @@ pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plugins/doc/scripts", "scripts", "tests"]
 exclude = ["**/__pycache__", "**/.venv"]
+extraPaths = ["plugins/doc/hooks/scripts", "plugins/doc/scripts", "plugins/doc/skills/doc-lint/scripts"]
 # The brief JSON boundary is intentionally untyped; strict Unknown-reporting
 # would only repeat what the validator already checks at runtime.
 reportUnknownArgumentType = false

@@ -43,11 +43,21 @@ def _png() -> bytes:
 
 def _workspace(tmp_path: Path, *, markdown: str | None = None) -> tuple[Path, Path]:
     brief = json.loads(EXAMPLE_BRIEF.read_text(encoding="utf-8"))
-    brief["targets"] = [{"kind": "readme", "path": "doc-work/desk-timer/README.md"}]
+    brief["targets"] = [
+        {"kind": "readme", "path": "doc-work/desk-timer/README.md"},
+        {
+            "kind": "technical_reference",
+            "path": "doc-work/desk-timer/technical-reference.md",
+        },
+    ]
     work = tmp_path / "doc-work/desk-timer"
     work.mkdir(parents=True)
     brief_path = work / "doc-brief.json"
     brief_path.write_text(json.dumps(brief), encoding="utf-8")
+    (work / "technical-reference.md").write_text(
+        "# Technical reference\n\n## Design rationale\n\nA source-backed choice.\n",
+        encoding="utf-8",
+    )
     document = work / "README.md"
     document.write_text(
         markdown
@@ -76,7 +86,11 @@ def test_inventory_reports_missing_images_html_and_mermaid(tmp_path: Path) -> No
     inventory = doc_figures.figures(brief, tmp_path)
     assert inventory["ok"] is True
     assert inventory["documents"] == [
-        {"document": "doc-work/desk-timer/README.md", "mermaid_blocks": 1}
+        {"document": "doc-work/desk-timer/README.md", "mermaid_blocks": 1},
+        {
+            "document": "doc-work/desk-timer/technical-reference.md",
+            "mermaid_blocks": 0,
+        },
     ]
     figure, missing = inventory["figures"]
     assert figure["path"] == "doc-work/desk-timer/figures/timer.png"
@@ -269,6 +283,7 @@ def test_mcp_view_figure_returns_inline_image_and_records_event(
     pytest.importorskip("mcp.client.stdio")
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
+    from mcp.types import TextContent
 
     image = tmp_path / "figure.png"
     image.write_bytes(_png())
@@ -289,6 +304,7 @@ def test_mcp_view_figure_returns_inline_image_and_records_event(
                 )
                 assert not result.isError
                 assert [item.type for item in result.content] == ["image", "text"]
+                assert isinstance(result.content[1], TextContent)
                 metadata = json.loads(result.content[1].text)
                 assert (
                     metadata["sha256"] == hashlib.sha256(image.read_bytes()).hexdigest()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import io
 import json
 import os
 import sys
@@ -16,8 +17,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "plugins/doc/scripts"
 sys.path.insert(0, str(SCRIPTS))
 
+import doc_figures  # noqa: E402
 import doc_mcp  # noqa: E402
 import doc_records  # noqa: E402
+import doc_slp  # noqa: E402
 
 
 def decision(path: str = "source.md") -> dict[str, Any]:
@@ -177,6 +180,184 @@ def test_real_mcp_client_lists_and_calls_record_status(tmp_path: Path) -> None:
                 assert "doc_view_figure" in names
                 result = await session.call_tool("doc_records_status", {})
                 assert not result.isError
+                assert result.structuredContent is not None
                 assert result.structuredContent["ok"] is True
 
     asyncio.run(exercise())
+
+
+def test_json_rpc_methods_and_tool_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        doc_mcp,
+        "record_decision",
+        lambda args: {"ok": True, "record": args},
+    )
+    monkeypatch.setattr(
+        doc_mcp,
+        "record_impression",
+        lambda args: {"ok": True, "record": args},
+    )
+    monkeypatch.setattr(
+        doc_mcp,
+        "record_vision_review",
+        lambda args: {"ok": True, "record": args},
+    )
+    monkeypatch.setattr(doc_mcp, "records_summary", lambda: {"ok": True})
+
+    def lint(brief: Any, mode: Any = "full") -> dict[str, Any]:
+        return {"ok": True, "brief": brief, "mode": mode}
+
+    def figure_list(brief: Any, root: Any = None) -> dict[str, Any]:
+        return {"ok": True, "brief": brief}
+
+    def figure_metadata(path: Any, root: Any = None) -> dict[str, Any]:
+        return {"ok": True, "path": path}
+
+    def view_figure(
+        path: Any, root: Any = None, tool_call_id: Any = None
+    ) -> dict[str, Any]:
+        return {
+            "ok": True,
+            "image": {"mime_type": "image/png", "data": "bytes"},
+            "text": json.dumps({"path": path, "tool_call_id": tool_call_id}),
+        }
+
+    monkeypatch.setattr(doc_figures, "lint", lint)
+    monkeypatch.setattr(doc_figures, "figures", figure_list)
+    monkeypatch.setattr(doc_figures, "figure_metadata", figure_metadata)
+    monkeypatch.setattr(doc_figures, "view_figure", view_figure)
+
+    def ux_inbox() -> dict[str, Any]:
+        return {"ok": True, "requests": []}
+
+    def ux_respond(args: dict[str, Any]) -> dict[str, Any]:
+        return {"ok": True, "response": args}
+
+    monkeypatch.setattr(doc_slp, "ux_inbox", ux_inbox)
+    monkeypatch.setattr(doc_slp, "ux_respond", ux_respond)
+    requests: list[object] = [
+        [],
+        {"id": 1},
+        {"method": "notifications/initialized"},
+        {"id": 2, "method": "initialize", "params": {"protocolVersion": "test"}},
+        {"id": 3, "method": "ping"},
+        {"id": 4, "method": "tools/list"},
+        {"id": 5, "method": "resources/list"},
+        {"id": 6, "method": "resources/templates/list"},
+        {"id": 7, "method": "prompts/list"},
+        {"id": 8, "method": "unknown"},
+        {
+            "id": 9,
+            "method": "tools/call",
+            "params": {"name": "doc_record_decision", "arguments": {"id": "choice"}},
+        },
+        {
+            "id": 10,
+            "method": "tools/call",
+            "params": {"name": "doc_record_impression", "arguments": {}},
+        },
+        {
+            "id": 11,
+            "method": "tools/call",
+            "params": {"name": "doc_record_vision_review", "arguments": {}},
+        },
+        {
+            "id": 12,
+            "method": "tools/call",
+            "params": {"name": "doc_records_status", "arguments": {}},
+        },
+        {
+            "id": 13,
+            "method": "tools/call",
+            "params": {"name": "doc_lint", "arguments": {"brief": "brief.json"}},
+        },
+        {
+            "id": 14,
+            "method": "tools/call",
+            "params": {
+                "name": "doc_lint",
+                "arguments": {"brief": "brief.json", "mode": "brief_only"},
+            },
+        },
+        {
+            "id": 15,
+            "method": "tools/call",
+            "params": {"name": "doc_figures", "arguments": {"brief": "brief.json"}},
+        },
+        {
+            "id": 16,
+            "method": "tools/call",
+            "params": {"name": "doc_figure", "arguments": {"path": "figure.png"}},
+        },
+        {
+            "id": 17,
+            "method": "tools/call",
+            "params": {
+                "name": "doc_view_figure",
+                "arguments": {"path": "figure.png"},
+            },
+        },
+        {
+            "id": 18,
+            "method": "tools/call",
+            "params": {"name": "doc_ux_inbox", "arguments": {}},
+        },
+        {
+            "id": 19,
+            "method": "tools/call",
+            "params": {"name": "doc_ux_respond", "arguments": {"request": "one"}},
+        },
+        {
+            "id": 20,
+            "method": "tools/call",
+            "params": {"name": "unknown", "arguments": {}},
+        },
+        {"id": 21, "method": "tools/call", "params": []},
+        {
+            "id": 22,
+            "method": "tools/call",
+            "params": {"name": "doc_records_status", "arguments": []},
+        },
+    ]
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        io.StringIO("".join(json.dumps(request) + "\n" for request in requests)),
+    )
+    assert doc_mcp.serve() == 0
+    output = capsys.readouterr().out.splitlines()
+    responses = {response["id"]: response for response in map(json.loads, output)}
+    assert responses[1]["error"]["code"] == -32600
+    assert responses[2]["result"]["protocolVersion"] == "test"
+    assert responses[3]["result"] == {}
+    assert responses[5]["result"]["resources"] == []
+    assert responses[6]["result"]["templates"] == []
+    assert responses[7]["result"]["prompts"] == []
+    assert responses[8]["error"]["code"] == -32601
+    assert responses[9]["result"]["structuredContent"]["record"]["id"] == "choice"
+    assert responses[13]["result"]["structuredContent"]["mode"] == "full"
+    assert responses[14]["result"]["structuredContent"]["mode"] == "brief_only"
+    assert responses[17]["result"]["content"][0]["type"] == "image"
+    assert responses[18]["result"]["structuredContent"]["requests"] == []
+    assert responses[19]["result"]["structuredContent"]["response"]["request"] == "one"
+    assert responses[20]["result"]["isError"] is True
+    assert responses[21]["result"]["isError"] is True
+    assert responses[22]["result"]["isError"] is True
+
+
+def test_mcp_server_reads_lines_and_reports_bad_json(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        io.StringIO('{"jsonrpc":"2.0","id":7,"method":"ping"}\nnot-json\n'),
+    )
+    assert doc_mcp.serve() == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["result"] == {}
+    assert "doc MCP server:" in captured.err

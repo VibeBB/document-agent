@@ -636,12 +636,14 @@ def test_mcp_inbox_and_respond_round_trip(tmp_path: Path) -> None:
                 assert "doc_ux_inbox" in names
                 assert "doc_ux_respond" in names
                 inbox = await session.call_tool("doc_ux_inbox", {})
+                assert inbox.structuredContent is not None
                 assert inbox.structuredContent["requests"][0]["state"] == "new"
                 answered = await session.call_tool(
                     "doc_ux_respond",
                     response_input("panel", "accepted"),
                 )
                 assert not answered.isError
+                assert answered.structuredContent is not None
                 assert answered.structuredContent["ok"] is True
 
     asyncio.run(exercise())

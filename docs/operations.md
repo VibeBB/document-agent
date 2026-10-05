@@ -4,6 +4,17 @@ Operational detail for maintainers and installers: the release process,
 plugin update caveats, runtime surfaces, and verification recipes. For a
 product overview see the [README](../README.md).
 
+## Supported runtime and availability
+
+The plugin manifest and Python project are currently version `0.1.0`. The
+declared target is OpenHands Software Agent SDK v1.52.0, with Python 3.12+
+for repository development. There is no doc tools image: hooks and the MCP
+server invoke host `python3`; plugin record, liaison, figure, and lint
+scripts use only the Python standard library. The SDK/tool packages are
+installed by the repository’s `sdk-check` development group for plugin-load
+verification, not as a runtime dependency embedded in the plugin. Initial
+installation steps are in the [product README](../README.md).
+
 ## Release process
 
 Run the `release` workflow manually with `workflow_dispatch`. Select a `bump`
@@ -48,9 +59,9 @@ curl -sS -H "X-Session-API-Key: $KEY" http://127.0.0.1:8000/api/plugins/installe
 
 ## If sub-agents do not activate
 
-`/doc:write` uses `task` only when it is in the conversation's tool list.
-Otherwise it runs the liaison, writer, and review stages in the parent
-conversation and says so on its final `Path: fallback (no task)` line. Since
+`/doc:write` and `/doc:launch` use `task` only when it is in the
+conversation's tool list. Otherwise they run their stages in the parent
+conversation and report the no-task fallback. Since
 SDK 1.51.0, the profile's `tools` is the only tool control: add
 `task_tool_set` there. The retired `enable_sub_agents` and
 `enable_switch_llm_tool` switches still fold into `tools` with a deprecation
@@ -64,18 +75,21 @@ workspace artifacts only.
 ## OpenHands runtime surfaces
 
 - `model:` resolves through `LLMProfileStore` (`~/.openhands/profiles/`):
-  `vibebb-author` for `doc-writer` and `doc-liaison`, `vibebb-review` for
-  `doc-review`. The `session_start` hook `ensure_llm_profiles.py` clones the
-  conversation's `active_profile` into those names when they are absent.
-- `permission_mode: never_confirm` on all three agents; their only write
-  paths are the target documents and `doc-work/<slug>/`.
+  `vibebb-author` for `doc-writer`, `doc-liaison`, and `doc-launch`;
+  `vibebb-review` for `doc-review`. The `session_start` hook
+  `ensure_llm_profiles.py` copies the conversation's `active_profile` into
+  those names only when they are absent, and reports whether the review
+  profile appears vision-capable.
+- `permission_mode: never_confirm` is set on all four agents. Their prompt
+  contracts limit product-document writes to the assigned stage; hooks
+  protect generated lint and record artifacts separately.
 - Sub-agents do not inherit plugin hooks, so each agent declares
   `protect-lint-report` and `safety-rail` in its frontmatter with the same
   commands as `hooks/hooks.json` (a test keeps them identical).
 - `safety-rail` denies a deterministic denylist of terminal commands
   (root/home `rm -rf`, block-device writes, power commands, and the git
-  operations the work contract bans). It is advisory depth, not a security
-  analyzer.
+  operations the work contract bans). It is a narrow pattern matcher, not a
+  security analyzer.
 - The plugin root resolves in this order: `$DOC_PLUGIN_ROOT`,
   `$OPENHANDS_PROJECT_DIR/plugins/doc`, `$HOME/.agents/plugins/doc`,
   `$HOME/.openhands/plugins/installed/doc`.
@@ -88,8 +102,25 @@ uv run ruff check . && uv run ruff format --check .
 uv run pyright
 uv run pytest -q
 uv run python scripts/verify_docs.py
+uv run python scripts/check_shared_hooks.py
+uv run python scripts/check_shared_workflows.py
 uv run --group sdk-check python scripts/check_plugin_load.py
 ```
+
+The CI job also lints both shipped examples in full mode:
+
+```bash
+uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py \
+  --root plugins/doc/skills/doc-lint/examples/desk-timer \
+  --brief plugins/doc/skills/doc-lint/examples/desk-timer/doc-work/desk-timer/doc-brief.json \
+  --no-write
+uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py \
+  --root plugins/doc/skills/doc-lint/examples/desk-timer-launch \
+  --brief plugins/doc/skills/doc-lint/examples/desk-timer-launch/doc-work/desk-timer/doc-brief.json \
+  --no-write
+```
+
+Coverage must meet the `fail_under = 82` threshold in `pyproject.toml`.
 
 pytest selects subsets directly for a faster local check — `-k <expr>`, a
 test path, or `-n 0` to disable the default `-n auto` workers:

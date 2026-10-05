@@ -1,12 +1,16 @@
 """Tests for the doc plugin hook scripts."""
 
 import importlib.util
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from conftest import BRIEF_REL, EXAMPLE, LINT_SCRIPT, PLUGIN_ROOT
 
@@ -115,12 +119,76 @@ def test_require_records_denial_is_bounded(tmp_path: Path) -> None:
 
 
 def test_protected_record_status_and_session_paths() -> None:
+    module = _load_protect_module()
+    assert module._is_protected("observations/doc/records-status.json")
+    assert module._is_protected("observations/doc/.sessions/session.json")
+
+
+def _load_protect_module() -> Any:
     spec = importlib.util.spec_from_file_location("protect_lint_report", PROTECT_SCRIPT)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module._is_protected("observations/doc/records-status.json")
-    assert module._is_protected("observations/doc/.sessions/session.json")
+    return module
+
+
+def _load_status_module() -> Any:
+    spec = importlib.util.spec_from_file_location("report_doc_status", STATUS_SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_status_helpers_report_freshness_and_question_counts(workspace: Path) -> None:
+    module = _load_status_module()
+    brief_path = workspace / BRIEF_REL
+    brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    assert module.lint_state(brief_path, workspace) == "false"
+    assert module.pending_questions(brief) == (1, 1)
+
+    _lint(workspace)
+    assert module.lint_state(brief_path, workspace) == "pass"
+    report_path = brief_path.with_name("doc-lint.json")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["mode"] = "brief_only"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    assert module.lint_state(brief_path, workspace) == "fail"
+
+    report["mode"] = "full"
+    report["documents"][0]["path"] = None
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    assert module.lint_state(brief_path, workspace) == "stale"
+    report_path.write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError, match="expected a JSON object"):
+        module.lint_state(brief_path, workspace)
+
+
+def test_status_main_emits_summary_and_fails_on_bad_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = _load_status_module()
+    monkeypatch.setattr(
+        sys, "stdin", io.StringIO(json.dumps({"working_dir": str(tmp_path)}))
+    )
+    assert module.main() == 0
+    assert "No doc briefs" in capsys.readouterr().out
+
+    root = tmp_path / "workspace"
+    shutil.copytree(EXAMPLE, root)
+    monkeypatch.setattr(
+        sys, "stdin", io.StringIO(json.dumps({"working_dir": str(root)}))
+    )
+    assert module.main() == 0
+    output = capsys.readouterr().out
+    assert "unanswered_inquiries=1 open_questions=1" in output
+    assert "List unanswered inquiries and open questions" in output
+
+    monkeypatch.setattr(sys, "stdin", io.StringIO("{"))
+    assert module.main() == 1
+    assert "report_doc_status:" in capsys.readouterr().err
 
 
 def test_status_unlinted_then_pass_then_stale(workspace: Path) -> None:
@@ -305,6 +373,132 @@ def test_protect_lint_report_rejects_bad_input() -> None:
         check=False,
     )
     assert result.returncode == 2
+
+
+def test_protect_terminal_detects_shell_write_forms() -> None:
+    module = _load_protect_module()
+    target = "doc-work/x/doc-lint.json"
+    commands = (
+        f"echo data > {target}",
+        f"echo data >> {target}",
+        f"echo data 2> {target}",
+        f"echo data 1>> {target}",
+        f"echo data >{target}",
+        f"sudo tee -a {target}",
+        f"env MODE=1 tee {target}",
+        f"dd if=/dev/null of={target}",
+        f"sed -i s/fail/pass/ {target}",
+        f"cp source {target}",
+        f"mv source {target}",
+        f"install source {target}",
+        f"rsync source {target}",
+        f"ln -s source {target}",
+        f"scp source {target}",
+        f"cpio --pass-through {target}",
+        f"rm {target}",
+        f"rmdir {target}",
+        f"touch {target}",
+        f"mkdir {target}",
+        f"chmod 600 {target}",
+        f"chown user {target}",
+        f"chgrp group {target}",
+        f"truncate -s 0 {target}",
+        f"shred {target}",
+        f"cat source; tee {target}",
+        "echo data > observations/doc/.sessions/session.json",
+        "echo data > intake/attachments/manifest.jsonl",
+        f"echo 'unterminated > {target}",
+    )
+    for command in commands:
+        assert module._terminal_write_target(command) is not None, command
+    assert module._terminal_write_target(f"cat {target}") is None
+    assert module._terminal_write_target("python3 -c 'print(1)'") is None
+
+
+def test_protect_path_and_editor_dispatch_edges() -> None:
+    module = _load_protect_module()
+    for path in (
+        r"C:\workspace\DOC-WORK\slug\doc-lint.json",
+        "observations/doc/records-status.json",
+        "observations/doc/decisions.jsonl",
+        "observations/doc/.sessions/session.json",
+        "intake/attachments/manifest.jsonl",
+    ):
+        assert module._is_protected(path)
+    assert not module._is_protected("observations/doc/notes.txt")
+    assert not module._is_protected("docs/doc-lint.json.backup")
+
+    assert not module._is_artifact_write({"tool_name": "terminal"})
+    assert not module._is_artifact_write({"tool_name": "file_editor", "tool_input": []})
+    assert not module._is_artifact_write(
+        {"tool_name": "file_editor", "tool_input": {"path": "doc-lint.json"}}
+    )
+    assert module._is_artifact_write(
+        {
+            "tool_name": "file_editor",
+            "tool_input": {
+                "action": "write",
+                "paths": ["README.md", "doc-work/x/doc-lint.json"],
+            },
+        }
+    )
+    assert not module._is_artifact_write(
+        {
+            "tool_name": "file_editor",
+            "tool_input": {"action": "read", "path": "doc-work/x/doc-lint.json"},
+        }
+    )
+    assert module._is_artifact_write(
+        {
+            "tool_name": "apply_patch",
+            "tool_input": {"patch": "*** Move to: doc-work/x/doc-lint.json"},
+        }
+    )
+    assert (
+        module._is_terminal_write(
+            {
+                "tool_name": "terminal",
+                "tool_input": {"command": "tee doc-work/x/doc-lint.json"},
+            }
+        )
+        == "doc-work/x/doc-lint.json"
+    )
+    assert (
+        module._is_terminal_write(
+            {"tool_name": "terminal", "tool_input": {"command": 5}}
+        )
+        is None
+    )
+
+
+def test_protect_main_reports_parse_and_write_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = _load_protect_module()
+    monkeypatch.setattr(sys, "stdin", io.StringIO("not-json"))
+    assert module.main() == 2
+    assert "invalid hook input" in capsys.readouterr().err
+
+    monkeypatch.setattr(sys, "stdin", io.StringIO("[]"))
+    assert module.main() == 2
+    assert "not an object" in capsys.readouterr().err
+
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        io.StringIO(
+            json.dumps(_editor("create", "doc-work/x/doc-lint.json", file_text="{}"))
+        ),
+    )
+    assert module.main() == 2
+    assert "hook-managed" in capsys.readouterr().err
+
+    monkeypatch.setattr(
+        sys, "stdin", io.StringIO(json.dumps(_terminal("cat doc-lint.json")))
+    )
+    assert module.main() == 0
+    assert capsys.readouterr().err == ""
 
 
 def test_safety_rail_denies_denylist() -> None:
