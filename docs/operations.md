@@ -91,6 +91,15 @@ uv run python scripts/verify_docs.py
 uv run --group sdk-check python scripts/check_plugin_load.py
 ```
 
+pytest selects subsets directly for a faster local check — `-k <expr>`, a
+test path, or `-n 0` to disable the default `-n auto` workers:
+
+```bash
+uv run pytest -q tests/test_doc_lint.py
+uv run pytest -q -k hooks
+uv run pytest -q -n 0
+```
+
 Lint a workspace by hand (from its root):
 
 ```bash
