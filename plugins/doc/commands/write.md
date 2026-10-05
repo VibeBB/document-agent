@@ -52,6 +52,11 @@ Documentation takes many minutes, so make the plan visible before starting.
 
    Without `task`: read `<doc plugin root>/agents/doc-liaison.md` and run
    its stages yourself, writing the same files.
+   Also check `doc_ux_inbox` or `python3 <doc plugin root>/scripts/doc_tool.py ux inbox`
+   for sister requests addressed to doc. Treat these as inbound work,
+   separate from questions doc asks other sisters; answer them through
+   `doc_ux_respond` / `doc_tool.py ux respond` and do not claim `done` until its
+   deterministic gates pass.
 5. **Interview (when needed).** If `inquiries.md` has `to: user` questions
    still `unanswered` and `doc-work/<slug>/interview.md` does not already
    answer them, run the `/doc:interview` procedure now: ask the questions

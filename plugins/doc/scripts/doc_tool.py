@@ -90,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
             return doc_mcp.serve()
         result = _dispatch(args)
         _print(result)
-        return 0
+        return 2 if result.get("ok") is False else 0
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         _print({"ok": False, "errors": [str(exc)]})
         return 2

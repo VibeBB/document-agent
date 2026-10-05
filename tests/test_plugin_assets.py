@@ -120,6 +120,23 @@ def test_write_command_contract_lines() -> None:
         assert expected in text, expected
 
 
+def test_sister_liaison_v2_guidance() -> None:
+    liaison = (PLUGIN_ROOT / "agents" / "doc-liaison.md").read_text(encoding="utf-8")
+    for expected in (
+        "At the start of each run",
+        "doc_ux_inbox",
+        "doc_ux_respond",
+        "do not claim completion for stale",
+        "deterministic doc linter already passed",
+    ):
+        assert expected in liaison, expected
+    for command in ("write", "launch"):
+        text = (PLUGIN_ROOT / "commands" / f"{command}.md").read_text(encoding="utf-8")
+        assert "doc_ux_inbox" in text
+    doctor = (PLUGIN_ROOT / "commands" / "doctor.md").read_text(encoding="utf-8")
+    assert "liaison inbox counts" in doctor
+
+
 def test_interview_command_ends_turn_and_records_verbatim() -> None:
     text = (PLUGIN_ROOT / "commands" / "interview.md").read_text(encoding="utf-8")
     for expected in ("without a tool call", "verbatim", "interview.md", "skip"):

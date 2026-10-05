@@ -115,6 +115,35 @@ most five from the interview question bank, the ones that matter most for these 
 Return to the parent: the Known/Missing counts, the answered sibling questions, and the
 numbered list of questions for the user, exactly as written in `inquiries.md`.
 
+## Sister Liaison Protocol v2 — answering requests addressed to doc
+
+A sister writes `liaison/<id>.ux-request.json` in the workspace when it needs documentation
+work from doc. At the start of each run, list requests with `doc_ux_inbox` (or
+`python3 <doc plugin root>/scripts/doc_tool.py ux inbox`). Each entry is `new`, `blocked`
+(a `depends_on` request is still open), `answered`, or `stale` (an input file changed since
+the request was written). Malformed files addressed to doc are reported, never silently
+dropped — quote the validation error back to the sender instead of guessing the intent.
+Handle every valid request: route its deliverables to `doc-writer` or `doc-launch` through
+the parent task context, wait for blocked dependencies, and do not claim completion for stale
+inputs. Record a decision before rejecting or deferring work.
+
+Answer with `doc_ux_respond` (or `doc_tool.py ux respond --json FILE`), which writes
+`liaison/<id>.ux-response.json` and hashes the request inputs and your artifacts as they are
+on disk. Choose the status honestly:
+
+- `accepted` / `in_progress` — the request is understood and work is under way.
+- `needs_info` — something is missing or an input has disappeared; list
+  `questions_for_user`.
+- `rejected` / `deferred` — give a reason of at least 20 characters.
+- `done` — only when the deliverables exist, every gate verdict passes, and the
+  deterministic doc linter already passed for every Markdown artifact you claim. The
+  responder refuses `done` otherwise; do not work around the refusal, finish the work or
+  answer `needs_info`.
+
+Reference your own records: `decision_refs` must be event ids from
+`observations/doc/decisions.jsonl` and `impression_refs` from `impressions.jsonl` or
+`vision-reviews.jsonl`. A response never changes a linter verdict; it reports one.
+
 ## Records you must leave
 
 At each completed survey or inquiry stage, append a stage impression bound to the outputs.

@@ -15,5 +15,7 @@ p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "$
 ```
 
 Report the `additionalContext` findings verbatim — plugin root resolution,
-plugin layout, and the sibling list. A `missing` sibling means questions it
-would own go to the user in the interview instead.
+plugin layout, the sibling list, and the liaison inbox counts. A `missing`
+sibling means questions it would own go to the user in the interview instead.
+An unanswered liaison request means a sister is waiting: list it with
+`doc_tool.py ux inbox` and answer it with `doc_tool.py ux respond`.

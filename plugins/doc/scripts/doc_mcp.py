@@ -37,6 +37,50 @@ def _string(minimum: int = 1) -> dict[str, Any]:
     return {"type": "string", "minLength": minimum}
 
 
+def _array(items: dict[str, Any]) -> dict[str, Any]:
+    return {"type": "array", "items": items}
+
+
+SLP_GATE_SCHEMA = _object(
+    {
+        "gate": _string(),
+        "verdict": {"type": "string", "enum": ["pass", "fail", "unknown"]},
+    },
+    ["gate", "verdict"],
+)
+SLP_RESPOND_SCHEMA = _object(
+    {
+        "request": _string(),
+        "status": {
+            "type": "string",
+            "enum": [
+                "accepted",
+                "in_progress",
+                "done",
+                "rejected",
+                "deferred",
+                "needs_info",
+            ],
+        },
+        "reason": _string(0),
+        "artifacts": _array(_string()),
+        "gate_verdicts": _array(SLP_GATE_SCHEMA),
+        "decision_refs": _array(_string()),
+        "impression_refs": _array(_string()),
+        "questions_for_user": _array(_string()),
+    },
+    [
+        "request",
+        "status",
+        "artifacts",
+        "gate_verdicts",
+        "decision_refs",
+        "impression_refs",
+        "questions_for_user",
+    ],
+)
+
+
 RECORD_SCHEMAS["vision_review"]["anyOf"] = [
     {"required": ["image_path"]},
     {"required": ["source_event_id"]},
@@ -72,7 +116,7 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "doc_ux_respond",
         "description": "Write a liaison response.",
-        "inputSchema": _object({"response": _object({}, [])}, ["response"]),
+        "inputSchema": SLP_RESPOND_SCHEMA,
     },
     {
         "name": "doc_lint",
@@ -151,9 +195,7 @@ def _call(
         import doc_slp
 
         return (
-            doc_slp.ux_inbox()
-            if name == "doc_ux_inbox"
-            else doc_slp.ux_respond(args["response"])
+            doc_slp.ux_inbox() if name == "doc_ux_inbox" else doc_slp.ux_respond(args)
         )
     raise ValueError(f"unknown tool: {name}")
 
