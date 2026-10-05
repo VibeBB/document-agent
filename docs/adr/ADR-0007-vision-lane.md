@@ -5,7 +5,7 @@
 
 ## Context
 
-Documentation often embeds diagrams, screenshots, and rendered sibling
+Documentation often embeds diagrams, screenshots, and rendered sister
 figures. Text-only inspection cannot establish whether an image exists,
 matches its caption and surrounding text, or is legible and accessible.
 User-attached screenshots and photos also need a traceable workspace path.

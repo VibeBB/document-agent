@@ -1,9 +1,9 @@
 ---
 name: doc-inquiry
-description: Who owns which product facts (workspace files, sibling agents wire, mech, circuit, ux, bard, and the user), how to ask a sibling a read-only question, the inquiry and interview record formats, and the interview question bank about the maker's intent. Use before gathering facts for documentation or interviewing the user.
+description: Who owns which product facts (workspace files, sister agents, and the user), how to ask a sister a read-only question, the inquiry and interview record formats, and the interview question bank about the maker's intent. Use before gathering facts for documentation or interviewing the user.
 license: BSD-3-Clause
 triggers:
-  - sibling
+  - sister
   - inquiry
   - interview
   - ask the user
@@ -15,26 +15,33 @@ triggers:
 
 # Doc inquiry
 
-Documentation is only as true as its facts. Look in the workspace first, ask the sibling that
+Documentation is only as true as its facts. Look in the workspace first, ask the sister that
 owns a fact second, and ask the user only for what nobody else can know.
 
 ## Who owns what
 
-| Owner | Facts | Read first | Ask (task `subagent_type`) |
+| Owner | Facts and owned artifacts | Read first on `origin/main` | Ask (task `subagent_type`) |
 | --- | --- | --- | --- |
-| workspace | product name, commands, versions, setup, source layout | `README*`, `docs/`, `pyproject.toml`, `package.json`, `Makefile`, `git --no-pager log` | — |
-| wire | harness connectors, wires, pin assignments, cable lengths | `*.contract.json`, `*.connectivity.json`, `*.drawio.svg` | `wire-review` |
-| mech | enclosure, dimensions, materials, assembly, mounting | `*.brief.json`, `*.envelope.json`, `design-report.json` | `mech-review` |
-| circuit | power, electrical ratings, board interfaces, schematics | `*.brief.json`, `*.kicad_sch` | `circuit-review` |
-| ux | personas, jobs to be done, journeys, UI states, wording | `*.ux.json`, `*.stories.json`, `ux-report.json` | `ux-research` |
-| bard | songs about the work (tone only, never facts) | `songs/*/song.md` | — |
-| user | why the product exists, who it is really for, what matters, what must never be said | `doc-work/<slug>/interview.md` | `/doc:interview` |
+| workspace | Product name, commands, versions, setup, source layout | `README*`, `docs/`, `pyproject.toml`, `package.json`, `Makefile`, `git --no-pager log` | — |
+| ux | User journeys, jobs, interface states, wording; `*.ux.json`, `*.stories.json`, `*.production.json`, UX reports, liaison contracts | [UX-creator README](https://github.com/VibeBB/UX-creator-agent/blob/main/README.md), [ADR-0003](https://github.com/VibeBB/UX-creator-agent/blob/main/docs/adr/0003-sibling-cooperation-via-contracts.md) | `ux-creator`, `ux-liaison`, `ux-producer`, `ux-research`, `ux-review`, `ux-statechart` |
+| bard | Song and cue content; `song.md`, `song.mid`, `song.proposal.json`, `song.provenance.json`, `cues/<slug>/cues.json`, `cues.md` (songs are tone only, never engineering facts) | [bard README](https://github.com/VibeBB/bard-agent/blob/main/README.md) | `bard`, `bard-critic`, `bard-cue` |
+| dashboard | App routes, screens, platform and transport; `.dash.json`, generated app and screenshots | [dashboard README](https://github.com/VibeBB/dashboard-agent/blob/main/README.md) | `dashboard-architect`, `dashboard-developer`, `dashboard-review` |
+| circuit | Electrical ratings and PCB; design briefs, schematics, PCB layouts, and `kicad-cli` JSON reports | [electrical-circuit README](https://github.com/VibeBB/electrical-circuit-agent/blob/main/README.md) | `circuit-brief`, `circuit-layout`, `circuit-library`, `circuit-part-author-a`, `circuit-part-author-b`, `circuit-review`, `circuit-schematic` |
+| firmware | Firmware behavior and board pin maps; `*.fw.json`, firmware sources, `fw-reports/<name>.fw-pinmap.json` | [firmware README](https://github.com/VibeBB/firmware-agent/blob/main/README.md) | `firmware-architect`, `firmware-developer`, `firmware-review` |
+| fpga | FPGA design, bitstreams, pin maps, timing and simulation reports; `*.fpga.json` | [FPGA README](https://github.com/VibeBB/fpga-agent/blob/main/README.md), [circuit/FPGA interchange ADR](https://github.com/VibeBB/fpga-agent/blob/main/docs/adr/ADR-0006-circuit-fpga-interchange.md) | `fpga-architect`, `fpga-developer`, `fpga-review` |
+| mech | Enclosure, dimensions, materials, assembly and mounting; `intake.json`, `design.brief.json`, STEP/STL/3MF/DXF, manifest, provenance, design reports | [mechanical README](https://github.com/VibeBB/mechanical-agent/blob/main/README.md) | `mech-brief`, `mech-design`, `mech-review` |
+| prodeng | Manufacturing plans and factory readiness; `*.prodeng.json`, `*.prodeng-request.json`, `out/<product>/` | [production-engineering README](https://github.com/VibeBB/production-engineering-agent/blob/main/README.md) | `prodeng-ftm`, `prodeng-liaison`, `prodeng-planner`, `prodeng-review` |
+| sim | Simulation setup and results; `*.sim.json`, connectivity/envelope/contract imports, `out/<name>/sim-report.json`, manifest, provenance | [simulation README](https://github.com/VibeBB/simulation-agent/blob/main/README.md), [architecture](https://github.com/VibeBB/simulation-agent/blob/main/docs/architecture.md) | `sim-analyst`, `sim-liaison`, `sim-review` |
+| wire | Harness connectors, wires, pin assignments, cable lengths; `*.contract.json`, intake sidecar, wire list, cut table, BOM, harness diagram | [wire README](https://github.com/VibeBB/wire-agent/blob/main/README.md) | `wire-brief`, `wire-design`, `wire-review` |
+| user | Why the product exists, who it is really for, what matters, and what must never be said | `doc-work/<slug>/interview.md` | `/doc:interview` |
 
-Sibling artifact names are hints: a sibling's own README or `AGENTS.md` wins when they differ.
-A sibling that is not installed (see `/doc:doctor`) is `not_available`; its questions go to
-the user only when the user can reasonably know the answer.
+Each sister's VRP decision source is `observations/<plugin>/decisions.jsonl`;
+cite the selected event with a `sister_record` source when it explains a design
+rationale. Each sister's own `origin/main` README and docs remain authoritative
+if artifact names here differ. A sister not installed (see `/doc:doctor`) is
+`not_available`; ask the user only questions they can reasonably answer.
 
-## Asking a sibling
+## Asking a sister
 
 One question per `task` call, read-only:
 
@@ -64,7 +71,7 @@ Conflicts in `survey.md`; the writer states neither until it is resolved.
 ```
 
 `status` is `answered`, `unanswered`, or `not_available`. The writer copies these into the
-brief's `inquiries`; an `answered` sibling answer becomes a `sibling_agent` source and a user
+brief's `inquiries`; an `answered` sister answer becomes a `sister_agent` source and a user
 answer becomes a `user_interview` source (`interview.md#A<n>`).
 
 ## Interview question bank
@@ -86,4 +93,4 @@ changes their meaning, and statements of intent appear only when the user made t
 
 At the end of the survey and inquiry stages, record an impression bound to the stage files.
 Record meaningful choices about evidence ownership, conflicts, and unanswered questions using
-the document-records skill; do not treat a record as a fact source unless the brief cites it.
+the `doc-records` skill; do not treat a record as a fact source unless the brief cites it.

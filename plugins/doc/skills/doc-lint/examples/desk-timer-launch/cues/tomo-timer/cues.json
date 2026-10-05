@@ -1,0 +1,9 @@
+{
+  "product": "Tomo Timer",
+  "cues": {
+    "done": {
+      "description": "Two-tone rising cue",
+      "duration_ms": 600
+    }
+  }
+}

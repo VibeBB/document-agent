@@ -35,7 +35,7 @@ hooks:
       hooks:
         - type: command
           name: protect-lint-report
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
     - matcher: terminal
       hooks:
         - type: command
@@ -100,8 +100,10 @@ The prompt names the work directory (`doc-work/<slug>/`) and the targets. Read, 
 
 Write `<work dir>/doc-brief.json` following the contract in the doc-lint SKILL:
 
-- One `sources` entry per place a fact came from. Answers from a sibling agent are
-  `sibling_agent` with its `agent`; a sibling's workspace file is `sibling_artifact`; the
+- One `sources` entry per place a fact came from. Answers from a sister agent are
+  `sister_agent` with its `agent`; a sister's workspace file is `sister_artifact` with its
+  current `sha256`; a VRP rationale is a `sister_record` with its event ID and canonical
+  observations log path. Workspace `file` sources may also carry a current `sha256`. The
   user's interview answers are `user_interview`.
 - One `facts` entry per concrete claim the documents will make (numbers, steps, names,
   interfaces), each with at least one source.
@@ -149,7 +151,7 @@ facts only.
 Write the technical reference target (default `docs/technical-reference.md`) following the
 doc-craft template: architecture with a Mermaid diagram, components, interfaces and
 specifications (tables, units always), data and configuration formats, development (build,
-test, release) and the sources for each subsystem (which sibling agent owns it).
+test, release) and the sources for each subsystem (which sister agent owns it).
 
 ## Stage 6 — Lint
 
@@ -198,7 +200,7 @@ change doc-lint's verdict.
 
 Images. User-attached screenshots and photos are materialized under
 `intake/attachments/` with a provenance `manifest.jsonl`. Inspect them and
-sibling renders with `doc_view_figure` before describing them. A caption or
+sister renders with `doc_view_figure` before describing them. A caption or
 step that depends on a picture you could not see is a question for the user,
 not a guess. Embed an image only when the file exists in the workspace, with
 alt text that states what it shows.

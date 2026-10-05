@@ -35,7 +35,7 @@ hooks:
       hooks:
         - type: command
           name: protect-lint-report
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
     - matcher: terminal
       hooks:
         - type: command
@@ -158,7 +158,7 @@ review; visual observations are advisory and never change doc-lint's verdict.
 
 Images. User-attached screenshots and photos are materialized under
 `intake/attachments/` with a provenance `manifest.jsonl`. Inspect them and
-sibling renders with `doc_view_figure` before describing them. A caption or
+sister renders with `doc_view_figure` before describing them. A caption or
 step that depends on a picture you could not see is a question for the user,
 not a guess. Embed an image only when the file exists in the workspace, with
 alt text that states what it shows.

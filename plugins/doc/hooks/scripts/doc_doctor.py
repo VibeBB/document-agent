@@ -5,10 +5,10 @@ Resolves the plugin root through the same env-var chain the hooks use
 (`DOC_PLUGIN_ROOT`, `$OPENHANDS_PROJECT_DIR/plugins/doc`,
 `~/.agents/plugins/doc`, `~/.openhands/plugins/installed/doc`), checks the
 plugin layout (`.plugin/plugin.json`, `agents/`, `skills/`), and reports which
-sibling plugins (wire, mech, circuit, ux, bard) are installed next to it, so
-the doc agents know whom they can ask and which questions must go to the
-user instead. It also counts the liaison requests addressed to doc so a
-session starts knowing whether a sister is waiting for an answer. The hook is
+sister plugins are installed next to it so the doc agents know whom to ask and
+which questions must go to the user instead. It also counts liaison requests
+addressed to doc so a session starts knowing whether a sister is waiting for an
+answer. The hook is
 advisory and always exits 0.
 
 Python standard library only.
@@ -25,7 +25,18 @@ ROOT_ENV = "DOC_PLUGIN_ROOT"
 PROJECT_ENV = "OPENHANDS_PROJECT_DIR"
 SELF_PATH = Path("hooks") / "scripts" / "doc_doctor.py"
 REQUIRED_PATHS = (".plugin/plugin.json", "agents", "skills")
-SIBLINGS = ("wire", "mech", "circuit", "ux", "bard")
+SISTERS = (
+    "bard",
+    "circuit",
+    "dashboard",
+    "firmware",
+    "fpga",
+    "mech",
+    "prodeng",
+    "sim",
+    "ux",
+    "wire",
+)
 LIAISON_DIR = "liaison"
 REQUEST_SUFFIX = ".ux-request.json"
 RESPONSE_SUFFIX = ".ux-response.json"
@@ -58,10 +69,10 @@ def _resolve_root() -> Path | None:
     return None
 
 
-def sibling_status() -> dict[str, bool]:
+def sister_status() -> dict[str, bool]:
     return {
         name: any((d / ".plugin" / "plugin.json").is_file() for d in _plugin_dirs(name))
-        for name in SIBLINGS
+        for name in SISTERS
     }
 
 
@@ -111,16 +122,16 @@ def findings(root: Path | None) -> list[str]:
             )
         else:
             lines.append(f"plugin layout ok at {root}")
-    status = sibling_status()
+    status = sister_status()
     lines.append(
-        "siblings: "
+        "sisters: "
         + ", ".join(
             f"{name}={'installed' if ok else 'missing'}" for name, ok in status.items()
         )
     )
     if not any(status.values()):
         lines.append(
-            "no sibling plugin found; gather facts from workspace files and ask"
+            "no sister plugins found; gather facts from workspace files and ask"
             " the user for anything they cannot answer"
         )
     project = Path(os.environ.get(PROJECT_ENV) or ".")

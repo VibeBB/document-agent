@@ -14,7 +14,7 @@ identifiers are written in English.
 doc is the documentation specialist of the VibeBB agent family. It writes a
 product's documentation into the OpenHands workspace — a README a first-time
 user understands (a product explanation with a diagram, then a quick start),
-a user manual, and an engineer-facing technical reference — asking sibling
+a user manual, and an engineer-facing technical reference — asking sister
 agents for facts they own and interviewing the user for what only they know.
 It also writes fact-grounded launch material — a product page, a press
 release, a demo video script, and a launch plan (ADR-0006). Quality documents
@@ -25,8 +25,10 @@ are planned (ADR-0005).
 ```text
 plugins/doc/
 ├── .plugin/plugin.json
+├── .mcp.json
+├── scripts/                  # stdlib CLI and MCP entry points
 ├── agents/
-│   ├── doc-liaison.md        # Gathers facts: workspace survey, sibling inquiries (task)
+│   ├── doc-liaison.md        # Gathers facts: workspace survey, sister inquiries (task)
 │   ├── doc-writer.md         # Brief, outline, README / manual / technical reference, lint
 │   ├── doc-review.md         # Read-only review as first-time reader, user, engineer, buyer
 │   └── doc-launch.md         # Launch brief, product page / press release / demo / plan, lint
@@ -34,15 +36,19 @@ plugins/doc/
 │   ├── write.md              # /doc:write — context.md, liaison, interview, writer, verify
 │   ├── launch.md             # /doc:launch — launch context, liaison, interview, doc-launch
 │   ├── interview.md          # /doc:interview — ask the user, record answers verbatim
-│   └── doctor.md             # /doc:doctor — plugin root, layout, sibling availability
+│   └── doctor.md             # /doc:doctor — plugin root, layout, sister availability
 ├── hooks/                    # session_start doctor/profile/intake, pre_tool_use report guard +
 │                             # safety rail, stop status/intake, post_tool_use image observations
 └── skills/
     ├── doc-craft/            # Reader-first writing rules, templates, Mermaid rules, checklist
-    ├── doc-inquiry/          # Fact ownership per sibling, inquiry records, interview bank
+    ├── doc-inquiry/          # Fact ownership per sister, inquiry records, interview bank
+    ├── doc-records/          # VRP decisions, impressions, and vision-review guidance
     ├── doc-launch-craft/     # Audiences, messages, launch templates, claim rules
     ├── doc-lint/             # doc-brief.json contract + doc_lint.py (stdlib only) + examples
     └── doc-brief-rules/      # Path-triggered rule on doc-brief.json / doc-lint.json
+workspace/
+├── doc-work/<slug>/          # Brief, inquiries, interview, documents, and lint report
+└── liaison/                  # Sister Liaison Protocol requests and responses
 docs/
 ├── doc-brief-contract.md     # Canonical brief / report contract
 ├── operations.md
@@ -60,7 +66,7 @@ tests/                        # Linter, hook, and plugin-asset tests
   a fact states it (ADR-0006).
 - The maker's intent (`product.vision`) comes only from a user interview,
   recorded verbatim (ADR-0003).
-- Sibling facts come from sibling artifacts or a sibling's answer through
+- Sister facts come from sister artifacts or a sister's answer through
   `task`; conflicts are recorded, never silently resolved (ADR-0003).
 - `doc-lint.json` is written only by `doc_lint.py`; the `pre_tool_use` hook
   denies hand edits, and the stop hook reports stale reports (ADR-0004).
@@ -79,10 +85,10 @@ tests/                        # Linter, hook, and plugin-asset tests
 - Invoke sub-agents only with `task` (`TaskToolSet`) (ADR-0001). A task
   sub-agent does not receive the parent's conversation history: the parent
   writes `doc-work/<slug>/context.md`, and the sub-agents read the workspace.
-- Do not import sibling plugin code. Cooperate through shared-workspace
-  artifacts and the siblings' registered agents.
-- Shared hooks are canonical across the family; change all 9 copies together
-  and update `EXPECTED` in `scripts/check_shared_hooks.py`.
+- Do not import sister plugin code. Cooperate through shared-workspace
+  artifacts and the sisters' registered agents.
+- Shared hooks are canonical across the family; change every sister that
+  carries the file and update `EXPECTED` in `scripts/check_shared_hooks.py`.
 - `intake_attachments.py` and `record_*` hooks are intentionally repo-specific.
 - Sub-agents do not inherit plugin hooks; agent frontmatter repeats the
   `pre_tool_use` hooks from `hooks/hooks.json` verbatim.

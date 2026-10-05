@@ -1,7 +1,7 @@
 [project]
 name = "document-agent"
 version = "0.1.0"
-description = "An OpenHands plugin that writes product documentation (README, user manual, technical reference) with sibling-agent inquiries and user interviews"
+description = "An OpenHands plugin that writes product documentation (README, user manual, technical reference) with sister-agent inquiries and user interviews"
 requires-python = ">=3.12"
 license = "BSD-3-Clause"
 dependencies = []

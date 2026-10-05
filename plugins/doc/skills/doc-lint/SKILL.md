@@ -46,9 +46,9 @@ contract: `docs/doc-brief-contract.md`.
 | `product.audience` / `value` | 1..6 strings each |
 | `product.vision` + `vision_source` | optional, together; source must be `user_interview` |
 | `targets[]` | `{kind, path}`, unique kinds; 0.1: `readme`, `user_manual`, `technical_reference`; 0.2 adds `product_page`, `press_release`, `demo_script`, `launch_plan`; relative `.md` path |
-| `sources[]` | `{id: S<n>, kind, ref}`; kind `file`, `git_log`, `conversation`, `user_interview`, `sibling_agent`, `sibling_artifact`; sibling kinds need `agent` (`wire`, `mech`, `circuit`, `ux`, `bard`) |
+| `sources[]` | `file`, `git_log`, `conversation`, `user_interview`, `sister_agent`, `sister_artifact`, or `sister_record`; sister kinds need one of the ten plugin names in `agent`; `sister_artifact` requires `sha256`, `file` accepts optional `sha256`, and `sister_record` requires `event_id` plus a canonical observations log path |
 | `facts[]` | `{id: F<n>, text, sources: [S<n>, ...]}`, at least one fact, at least one known source each |
-| `inquiries[]` | `{id: Q<n>, to, question, status}`; `answered` needs `answer` and a `source` from that sibling (or `user_interview` for `to: user`) |
+| `inquiries[]` | `{id: Q<n>, to, question, status}`; `answered` needs `answer` and a `sister_agent` or `sister_artifact` source whose `agent` matches `to` (or `user_interview` for `to: user`) |
 | `open_questions[]` | 0..50 strings |
 | `launch` | 0.2 only; required with, and only allowed with, a launch target |
 | `launch.audiences[]` | 1..6 `{id: A<n>, name, insight, facts}` |
@@ -58,6 +58,10 @@ contract: `docs/doc-brief-contract.md`.
 
 Unknown keys are rejected. Quality-document kinds (`quality_plan`, `test_report`,
 `risk_assessment`, `inspection_record`) are reserved and rejected by schema 0.1.
+Source file and tree hashes and `sister_record` events are checked in both full
+and brief-only modes. A `sister_record` also requires a design-rationale H2/H3
+section in the technical reference, headed with `rationale`, `設計根拠`, or
+`設計判断`.
 
 ## Rejection table
 
@@ -78,6 +82,7 @@ Unknown keys are rejected. Quality-document kinds (`quality_plan`, `test_report`
 | `user_manual: no usage section` / `no troubleshooting / FAQ section` | Add `How to use` / `使い方` and `Troubleshooting` / `トラブルシューティング` sections. |
 | `technical_reference: no architecture section` / `architecture section has no diagram` | Add `Architecture` / `アーキテクチャ` with a Mermaid diagram inside it. |
 | `technical_reference: no interface / spec section` | Add `Interfaces` / `仕様` (API, CLI, protocol, ratings). |
+| `technical_reference: no design-rationale section` | When the brief cites a sister record, add an H2/H3 section named `Rationale`, `設計根拠`, or `設計判断`. |
 | `technical_reference: no development / test section` | Add `Development` / `開発` (build, test, release). |
 
 | `unsourced superlative '...'` | Remove it, or add the fact (with a source) that says it. |

@@ -19,15 +19,17 @@
   ],
   "sources": [
     {"id": "S1", "kind": "file", "ref": "firmware/src/main.c"},
-    {"id": "S2", "kind": "sibling_artifact", "ref": "circuit/tomo.brief.json", "agent": "circuit"},
-    {"id": "S3", "kind": "sibling_agent", "ref": "doc-work/desk-timer/inquiries.md#Q1", "agent": "mech"},
-    {"id": "S4", "kind": "user_interview", "ref": "doc-work/desk-timer/interview.md#A1"}
+    {"id": "S2", "kind": "sister_artifact", "ref": "circuit/tomo.brief.json", "agent": "circuit", "sha256": "5c8185ab18cfc1bb559d03a539539cecddbf6af335e130c2c2700348d4aae68f"},
+    {"id": "S3", "kind": "sister_agent", "ref": "doc-work/desk-timer/inquiries.md#Q1", "agent": "mech"},
+    {"id": "S4", "kind": "user_interview", "ref": "doc-work/desk-timer/interview.md#A1"},
+    {"id": "S5", "kind": "sister_record", "ref": "observations/circuit/decisions.jsonl", "agent": "circuit", "event_id": "db06c3d4359a84a9d667a05b45abb05fb66c82881332978159069bcda1e766f3"}
   ],
   "facts": [
     {"id": "F1", "text": "The knob sets 1 to 90 minutes in 1-minute steps.", "sources": ["S1"]},
     {"id": "F2", "text": "Power is USB-C 5 V, under 0.5 W.", "sources": ["S2"]},
     {"id": "F3", "text": "The enclosure is 62 mm across and 28 mm tall.", "sources": ["S3"]},
-    {"id": "F4", "text": "A 12-LED ring shows the remaining time.", "sources": ["S1", "S2"]}
+    {"id": "F4", "text": "A 12-LED ring shows the remaining time.", "sources": ["S1", "S2"]},
+    {"id": "F5", "text": "The light ring shows status without requiring a screen or phone.", "sources": ["S5"]}
   ],
   "inquiries": [
     {"id": "Q1", "to": "mech", "question": "What are the enclosure outer dimensions?", "status": "answered", "answer": "62 mm diameter, 28 mm height.", "source": "S3"},

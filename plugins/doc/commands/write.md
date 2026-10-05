@@ -1,5 +1,5 @@
 ---
-description: Write product documentation for this workspace — a user-friendly README with a diagram and quick start, a user manual, and a technical reference — asking sibling agents and the user for anything unknown.
+description: Write product documentation for this workspace — a user-friendly README with a diagram and quick start, a user manual, and a technical reference — asking sister agents and the user for anything unknown.
 argument-hint: "[all|readme|manual|tech] [one-line subject]"
 allowed-tools:
   - terminal
@@ -47,7 +47,7 @@ Documentation takes many minutes, so make the plan visible before starting.
    ```text
    task(subagent_type="doc-liaison",
         description="Gather documentation facts",
-        prompt="Work directory: doc-work/<slug>/. Targets: <kind=path, ...>. Read context.md first, then survey the workspace and ask sibling agents. Write survey.md and inquiries.md.")
+        prompt="Work directory: doc-work/<slug>/. Targets: <kind=path, ...>. Read context.md first, then survey the workspace and ask sister agents. Write survey.md and inquiries.md.")
    ```
 
    Without `task`: read `<doc plugin root>/agents/doc-liaison.md` and run

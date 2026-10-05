@@ -196,10 +196,10 @@ def _doctor(env: dict[str, str]) -> str:
     return payload["additionalContext"]
 
 
-def test_doctor_resolves_root_and_reports_siblings(tmp_path: Path) -> None:
-    sibling = tmp_path / "project" / "plugins" / "mech" / ".plugin"
-    sibling.mkdir(parents=True)
-    (sibling / "plugin.json").write_text("{}", encoding="utf-8")
+def test_doctor_resolves_root_and_reports_sisters(tmp_path: Path) -> None:
+    sister = tmp_path / "project" / "plugins" / "mech" / ".plugin"
+    sister.mkdir(parents=True)
+    (sister / "plugin.json").write_text("{}", encoding="utf-8")
     context = _doctor(
         {
             "DOC_PLUGIN_ROOT": str(PLUGIN_ROOT),
@@ -210,13 +210,26 @@ def test_doctor_resolves_root_and_reports_siblings(tmp_path: Path) -> None:
     assert f"plugin layout ok at {PLUGIN_ROOT}" in context
     assert "mech=installed" in context
     assert "wire=missing" in context
-    assert "no sibling plugin found" not in context
+    for sister in (
+        "bard",
+        "circuit",
+        "dashboard",
+        "firmware",
+        "fpga",
+        "mech",
+        "prodeng",
+        "sim",
+        "ux",
+        "wire",
+    ):
+        assert f"{sister}=" in context
+    assert "no sister plugins found" not in context
 
 
 def test_doctor_unresolved_root_is_advisory(tmp_path: Path) -> None:
     context = _doctor({"OPENHANDS_PROJECT_DIR": str(tmp_path), "HOME": str(tmp_path)})
     assert "plugin root unresolved" in context
-    assert "no sibling plugin found" in context
+    assert "no sister plugins found" in context
 
 
 def _editor(command: str, path: str, **extra: str) -> dict[str, object]:

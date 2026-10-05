@@ -56,9 +56,9 @@ SDK 1.51.0, the profile's `tools` is the only tool control: add
 `enable_switch_llm_tool` switches still fold into `tools` with a deprecation
 warning until they are removed in SDK 1.56.0.
 
-Sibling inquiries through `task` need the sibling plugin installed in the
-same Agent Canvas. `/doc:doctor` lists which siblings it can see; missing
-siblings are recorded as `not_available` and their facts come from their
+Sister inquiries through `task` need the sister plugin installed in the
+same Agent Canvas. `/doc:doctor` lists which sisters it can see; missing
+sisters are recorded as `not_available` and their facts come from their
 workspace artifacts only.
 
 ## OpenHands runtime surfaces
@@ -131,9 +131,10 @@ skips the tracking-issue update.
   `dependency-review.yml` fails with "not supported on this repository"
   without it. The check is intentionally not required — it only reports on
   `pull_request` events.
-- **Required checks** are `verify (3.12)`, `verify (3.13)`, `verify (3.14)`, `plugin-load`,
-  and `zizmor`. No `pull_request` trigger may gain a paths filter, or a
-  required check can be skipped and auto-merge stalls.
+- **Required checks** are `verify (3.12)`, `verify (3.13)`, `plugin-load`,
+  and `zizmor`. Python 3.14 is not a required check. No `pull_request` trigger
+  may gain a paths filter, or a required check can be skipped and auto-merge
+  stalls.
 - **"Allow GitHub Actions to create and approve pull requests"** must stay
   on: the release workflow's fallback path opens and auto-merges a
   version-bump PR when direct push is rejected.

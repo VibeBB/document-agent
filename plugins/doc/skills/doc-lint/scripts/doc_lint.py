@@ -6,7 +6,7 @@ Usage:
 
 The brief (doc-brief.json, schema 0.1 or 0.2) is the fact ledger for one
 documentation run: product identity, the sources every fact came from, the
-questions asked of sibling agents or the user, and the target documents.
+questions asked of sister agents or the user, and the target documents.
 Schema 0.2 adds the marketing/launch kinds and the `launch` block that ties
 every audience, message, and call to action to facts.
 Target paths are resolved against --root (default: current directory, i.e.
@@ -28,13 +28,17 @@ import argparse
 import hashlib
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import cast
 
 _SCRIPT_DIR = str(Path(__file__).resolve().parent)
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
+_HOOKS_DIR = str(Path(__file__).resolve().parents[3] / "hooks" / "scripts")
+if _HOOKS_DIR not in sys.path:
+    sys.path.insert(0, _HOOKS_DIR)
 
+import _records  # type: ignore[reportMissingImports]  # noqa: E402
 from doc_brief import (  # noqa: E402
     AUDIENCE_KEYS,
     BRIEF_VERSIONS,
@@ -51,7 +55,7 @@ from doc_brief import (  # noqa: E402
     PRODUCT_DOC_KINDS,
     PRODUCT_KEYS,
     SCHEMA_VERSION,
-    SIBLINGS,
+    SISTERS,
     SOURCE_KINDS,
     TARGET_KINDS,
     TOP_KEYS,
@@ -93,6 +97,7 @@ from doc_markdown import (  # noqa: E402
     ORDERED_ITEM_RE,
     PLACEHOLDER_RE,
     QUICKSTART_ALIASES,
+    RATIONALE_ALIASES,
     SUPERLATIVE_RE,
     TABLE_SEPARATOR_RE,
     TASK_ITEM_RE,
@@ -167,9 +172,10 @@ __all__ = [
     "PRODUCT_KEYS",
     "ParsedDoc",
     "QUICKSTART_ALIASES",
+    "RATIONALE_ALIASES",
     "REPORT_NAME",
     "SCHEMA_VERSION",
-    "SIBLINGS",
+    "SISTERS",
     "SOURCE_KINDS",
     "SUPERLATIVE_RE",
     "TABLE_SEPARATOR_RE",
@@ -222,6 +228,8 @@ def lint_document(
     product_name: str,
     all_targets: list[Target],
     ctx: BriefContext | None = None,
+    *,
+    require_rationale: bool = False,
 ) -> tuple[list[str], str | None]:
     """Return (problems, sha256-or-None) for one target document."""
     path = root / target.path
@@ -302,6 +310,8 @@ def lint_document(
             problems.append("technical_reference: no interface / spec section")
         if _section(doc, DEV_ALIASES) is None:
             problems.append("technical_reference: no development / test section")
+        if require_rationale and _section(doc, RATIONALE_ALIASES) is None:
+            problems.append("technical_reference: no design-rationale section")
     elif target.kind in LAUNCH_KINDS:
         context = ctx or BriefContext(product_name=product_name)
         problems.extend(_launch_problems(doc, text, target, context, diagrams))
@@ -354,20 +364,118 @@ def brief_context(top: dict[str, object], product_name: str) -> BriefContext:
     )
 
 
+def _source_target(root: Path, ref: str) -> tuple[Path | None, str | None]:
+    if not _safe_rel_path(ref):
+        return None, "ref must be a relative workspace path"
+    base = root.resolve()
+    relative = Path(*PurePosixPath(ref).parts)
+    current = base
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            return None, "ref traverses a symlink"
+    try:
+        target = current.resolve(strict=True)
+        target.relative_to(base)
+    except FileNotFoundError:
+        return None, "ref does not exist"
+    except (OSError, ValueError):
+        return None, "ref is outside the workspace"
+    return target, None
+
+
+def _source_problems(root: Path, brief: dict[str, object]) -> list[str]:
+    problems: list[str] = []
+    for raw in _as_list(brief.get("sources")) or []:
+        source = _as_dict(raw)
+        if source is None:
+            continue
+        source_id = source.get("id")
+        label = f"source {source_id}" if isinstance(source_id, str) else "source"
+        kind = source.get("kind")
+        ref = source.get("ref")
+        if not isinstance(ref, str):
+            continue
+        if kind == "file" and isinstance(source.get("sha256"), str):
+            ref = ref.partition("#")[0]
+        if kind not in {"file", "sister_artifact", "sister_record"}:
+            continue
+        target, path_error = _source_target(root, ref)
+        if path_error is not None or target is None:
+            problems.append(f"{label} {path_error}: {ref}")
+            continue
+        if kind == "sister_record":
+            if not target.is_file():
+                problems.append(f"{label} record log is not a file: {ref}")
+                continue
+            event_id = source.get("event_id")
+            agent = source.get("agent")
+            found = False
+            wrong_plugin = False
+            try:
+                lines = target.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeError):
+                problems.append(f"{label} record log cannot be read: {ref}")
+                continue
+            for line in lines:
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(record, dict) or record.get("event_id") != event_id:
+                    continue
+                if record.get("plugin") == agent:
+                    found = True
+                    break
+                wrong_plugin = True
+            if not found:
+                if wrong_plugin:
+                    problems.append(
+                        f"{label} event {event_id} plugin does not match {agent}"
+                    )
+                else:
+                    problems.append(f"{label} event {event_id} not found in {ref}")
+            continue
+        if kind == "sister_artifact" and not (target.is_file() or target.is_dir()):
+            problems.append(f"{label} is not a file or directory: {ref}")
+            continue
+        digest = source.get("sha256")
+        if not isinstance(digest, str):
+            continue
+        if not (target.is_file() or target.is_dir()):
+            problems.append(f"{label} is not a file or directory: {ref}")
+            continue
+        if _records.tree_sha256(target) != digest:
+            problems.append(f"{label} changed since the brief was written")
+    return problems
+
+
 def build_report(
     brief_path: Path, root: Path, brief_only: bool = False
 ) -> dict[str, object]:
     brief, brief_digest = load_brief(brief_path)
     brief_problems, targets = validate_brief(brief)
     top = _as_dict(brief) or {}
+    brief_problems.extend(_source_problems(root, top))
     product = _as_dict(top.get("product")) or {}
     name = product.get("name")
     product_name = name.strip() if isinstance(name, str) else ""
     ctx = brief_context(top, product_name)
+    require_rationale = any(
+        (_as_dict(raw) or {}).get("kind") == "sister_record"
+        for raw in _as_list(top.get("sources")) or []
+    )
     documents: list[dict[str, object]] = []
     if not brief_only:
         for target in targets:
-            problems, digest = lint_document(target, root, product_name, targets, ctx)
+            problems, digest = lint_document(
+                target,
+                root,
+                product_name,
+                targets,
+                ctx,
+                require_rationale=require_rationale,
+            )
             documents.append(
                 {
                     "kind": target.kind,

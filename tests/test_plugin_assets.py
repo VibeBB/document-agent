@@ -152,12 +152,24 @@ def test_agents_name_their_stage_files() -> None:
         assert expected in liaison, expected
 
 
-def test_inquiry_skill_covers_every_sibling() -> None:
+def test_inquiry_skill_covers_every_sister() -> None:
     text = (PLUGIN_ROOT / "skills" / "doc-inquiry" / "SKILL.md").read_text(
         encoding="utf-8"
     )
-    for sibling in ("wire", "mech", "circuit", "ux", "bard", "user"):
-        assert f"| {sibling} |" in text, sibling
+    for sister in (
+        "bard",
+        "circuit",
+        "dashboard",
+        "firmware",
+        "fpga",
+        "mech",
+        "prodeng",
+        "sim",
+        "ux",
+        "wire",
+        "user",
+    ):
+        assert f"| {sister} |" in text, sister
 
 
 def test_hooks_json_matches_agent_frontmatter() -> None:

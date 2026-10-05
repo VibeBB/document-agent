@@ -18,7 +18,7 @@ Part of the [VibeBB](https://github.com/VibeBB) agent family:
 `document-agent` adds **doc**, a documentation writer, to OpenHands (Agent
 Canvas). It writes your product's documentation into the workspace: a README
 that a first-time user understands, a user manual, and a technical reference
-for engineers. When it does not know something, it asks the sibling agent that
+for engineers. When it does not know something, it asks the sister agent that
 designed that part — and, when only you can answer, it interviews you.
 
 > Target: OpenHands Software Agent SDK v1.52.0 / OpenHands Agent Canvas
@@ -49,7 +49,7 @@ listed back to you as an open question instead of being guessed.
 ```mermaid
 flowchart LR
     U[You: /doc:write] --> P[Parent agent writes context.md]
-    P --> L[doc-liaison: survey workspace and ask siblings]
+    P --> L[doc-liaison: survey workspace and ask sisters]
     L -->|questions only you can answer| I[/doc:interview/]
     I --> W[doc-writer: brief, outline, documents]
     L --> W
@@ -61,11 +61,11 @@ flowchart LR
 - A `task` sub-agent does not receive the parent's conversation, so the parent
   summarizes it in `doc-work/<slug>/context.md`
   ([ADR-0001](docs/adr/ADR-0001-task-subagent-plugin.md)).
-- `doc-liaison` reads sibling artifacts first (wiring contracts, enclosure
-  envelopes, circuit briefs, UX stories) and asks the owning sibling
+- `doc-liaison` reads sister artifacts first (wiring contracts, enclosure
+  envelopes, circuit briefs, UX stories) and asks the owning sister
   (`wire-review`, `mech-review`, `circuit-review`, `ux-research`) one focused
   question when a fact is still missing
-  ([ADR-0003](docs/adr/ADR-0003-sibling-inquiry-and-user-interview.md)).
+  ([ADR-0003](docs/adr/ADR-0003-sister-inquiry-and-user-interview.md)).
 - `doc-writer` records every claim as a fact with a source in
   `doc-brief.json`, then writes the documents. `doc_lint.py` (Python standard
   library only) checks the brief and each document: the README must explain
@@ -102,7 +102,7 @@ inspection records) are planned; their kinds are reserved in the contract
 3. Installation is complete when **doc** appears as enabled.
 4. Optionally enable sub-agents by adding `task_tool_set` to the agent
    profile's `tools` so doc can split the work into liaison, writer, and
-   reviewer and ask sibling agents. (`enable_sub_agents` is deprecated since
+   reviewer and ask sister agents. (`enable_sub_agents` is deprecated since
    SDK 1.51.0 and folds into the same tool.) doc also works without them
    (see the fallback in [docs/operations.md](docs/operations.md)).
 
@@ -128,7 +128,7 @@ PluginSource("github:VibeBB/document-agent", ref="main", repo_path="plugins/doc"
 | `/doc:write [all\|readme\|manual\|tech] [subject]` | Gather facts, interview when needed, write, lint, review |
 | `/doc:launch [all\|page\|press\|demo\|plan] [subject]` | Write the product page, press release, demo script, and launch plan from sourced facts |
 | `/doc:interview [slug] [topic]` | Ask you up to five questions and record the answers verbatim |
-| `/doc:doctor` | Check the plugin install and which sibling plugins are available |
+| `/doc:doctor` | Check the plugin install and which sister plugins are available |
 
 Work files live in `doc-work/<slug>/` (`context.md`, `survey.md`,
 `inquiries.md`, `interview.md`, `doc-brief.json`, `outline.md`, `review.md`,

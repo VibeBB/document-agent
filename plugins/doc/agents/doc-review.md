@@ -33,7 +33,7 @@ hooks:
       hooks:
         - type: command
           name: protect-lint-report
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
     - matcher: terminal
       hooks:
         - type: command
@@ -79,7 +79,7 @@ Read three times, as three people:
    precise enough to act on? Does the architecture diagram match the text?
 
 **Figures.** For every image a target document embeds (`![…](path)` or
-`<img src>`) and every rendered sibling figure it describes, open the file
+`<img src>`) and every rendered sister figure it describes, open the file
 with `doc_view_figure`. Check that the file exists, that the picture shows
 what the surrounding text and alt text say, that labels are legible, and
 that the alt text lets a screen-reader user follow the step. A Mermaid

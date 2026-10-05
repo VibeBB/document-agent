@@ -1,5 +1,5 @@
 ---
-description: Write fact-grounded launch material for this workspace's product — product page, press release, demo video script, and launch plan — asking sibling agents and the user for anything unknown.
+description: Write fact-grounded launch material for this workspace's product — product page, press release, demo video script, and launch plan — asking sister agents and the user for anything unknown.
 argument-hint: "[all|page|press|demo|plan] [one-line subject]"
 allowed-tools:
   - terminal
