@@ -53,13 +53,13 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             return doc_slp.ux_inbox()
         return doc_slp.ux_respond(_payload(args.json_file))
     if args.command == "figures":
-        import doc_vision
+        import doc_figures
 
-        return doc_vision.figures(args.brief)
+        return doc_figures.figures(args.brief)
     if args.command == "figure":
-        import doc_vision
+        import doc_figures
 
-        return doc_vision.figure_metadata(args.path)
+        return doc_figures.figure_metadata(args.path)
     raise ValueError(f"unknown command: {args.command}")
 
 

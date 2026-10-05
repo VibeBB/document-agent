@@ -61,11 +61,13 @@ TOOLS: list[dict[str, Any]] = [
         "name": "doc_records_status",
         "description": "Summarize record counts and the last Stop-hook verdict.",
         "inputSchema": _object({}, []),
+        "annotations": {"readOnlyHint": True},
     },
     {
         "name": "doc_ux_inbox",
         "description": "List and validate liaison requests targeting doc.",
         "inputSchema": _object({}, []),
+        "annotations": {"readOnlyHint": True},
     },
     {
         "name": "doc_ux_respond",
@@ -87,21 +89,26 @@ TOOLS: list[dict[str, Any]] = [
         "name": "doc_figures",
         "description": "Inventory figures referenced by brief target documents.",
         "inputSchema": _object({"brief": _string()}, ["brief"]),
+        "annotations": {"readOnlyHint": True},
     },
     {
         "name": "doc_figure",
         "description": "Describe figure metadata.",
         "inputSchema": _object({"path": _string()}, ["path"]),
+        "annotations": {"readOnlyHint": True},
     },
     {
         "name": "doc_view_figure",
         "description": "Return a supported image inline for visual inspection.",
         "inputSchema": _object({"path": _string()}, ["path"]),
+        "annotations": {"readOnlyHint": True},
     },
 ]
 
 
-def _call(name: str, args: dict[str, Any]) -> dict[str, Any]:
+def _call(
+    name: str, args: dict[str, Any], tool_call_id: object = None
+) -> dict[str, Any]:
     handlers: dict[str, Callable[..., dict[str, Any]]] = {
         "doc_record_decision": record_decision,
         "doc_record_impression": record_impression,
@@ -117,23 +124,28 @@ def _call(name: str, args: dict[str, Any]) -> dict[str, Any]:
             return handlers[name](args)
         return handlers[name]()
     if name == "doc_lint":
-        from doc_vision import lint
+        from doc_figures import lint
 
         return lint(args["brief"], args.get("mode", "full"))
     if name in {"doc_figures", "doc_figure", "doc_view_figure"}:
-        from doc_vision import figure_metadata, figures, view_figure
+        from doc_figures import figure_metadata, figures, view_figure
 
         if name == "doc_figures":
             return figures(args["brief"])
         if name == "doc_figure":
             return figure_metadata(args["path"])
-        result = view_figure(args["path"])
+        result = view_figure(args["path"], tool_call_id=tool_call_id)
         image = result.pop("image", None)
-        result["content"] = (
-            [{"type": "image", "mimeType": image["mime_type"], "data": image["data"]}]
-            if image
-            else []
-        )
+        text = result.pop("text", None)
+        content: list[dict[str, Any]] = []
+        if image:
+            content.append(
+                {"type": "image", "mimeType": image["mime_type"], "data": image["data"]}
+            )
+        if isinstance(text, str):
+            content.append({"type": "text", "text": text})
+        if content:
+            result["content"] = content
         return result
     if name in {"doc_ux_inbox", "doc_ux_respond"}:
         import doc_slp
@@ -150,7 +162,8 @@ def _result(value: dict[str, Any], *, error: bool = False) -> dict[str, Any]:
     content = value.get("content")
     if not isinstance(content, list):
         content = [{"type": "text", "text": json.dumps(value, ensure_ascii=False)}]
-    return {"content": content, "structuredContent": value, "isError": error}
+    structured = {key: item for key, item in value.items() if key != "content"}
+    return {"content": content, "structuredContent": structured, "isError": error}
 
 
 def _handle(message: object) -> dict[str, Any] | None:
@@ -195,7 +208,7 @@ def _handle(message: object) -> dict[str, Any] | None:
             arguments = params.get("arguments", {})
             if not isinstance(arguments, dict):
                 raise ValueError("params.arguments must be an object")
-            result = _call(params["name"], arguments)
+            result = _call(params["name"], arguments, tool_call_id=request_id)
             wrapped = _result(result, error=result.get("ok") is False)
         except (KeyError, OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
             wrapped = _result({"ok": False, "errors": [str(exc)]}, error=True)

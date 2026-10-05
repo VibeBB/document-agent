@@ -150,11 +150,15 @@ Append a hash-bound stage impression after the message plan, writing, and review
 consequential audience, message, and claim choices with options, evidence, assumptions, unknowns,
 risks, and revisit conditions. Vision impressions are advisory, never a doc-lint verdict.
 
+Launch visuals. Inspect the product-page hero image and every launch figure
+with `doc_view_figure`. Use the `launch-visual` checklist: confirm the image
+supports the message, audience, and call to action without implying an
+unsupported feature, comparison, or availability claim. Record each vision
+review; visual observations are advisory and never change doc-lint's verdict.
+
 Images. User-attached screenshots and photos are materialized under
-`intake/attachments/` with a provenance `manifest.jsonl`. Before describing
-any image in a document — a user screenshot, a product photo, or a sibling
-render such as `out/<name>/*.png` — open it with `file_editor view` and
-describe only what it shows. A caption or step that depends on a picture
-you could not see is a question for the user, not a guess. Embed an image
-only when the file exists in the workspace, with alt text that states what
-it shows.
+`intake/attachments/` with a provenance `manifest.jsonl`. Inspect them and
+sibling renders with `doc_view_figure` before describing them. A caption or
+step that depends on a picture you could not see is a question for the user,
+not a guess. Embed an image only when the file exists in the workspace, with
+alt text that states what it shows.

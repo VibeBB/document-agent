@@ -188,11 +188,17 @@ fact interpretation, organization, and consequential wording, including options,
 unknowns, residual risks, and revisit conditions. Figure reviews describe accuracy, ambiguity,
 intent, usefulness, and next actions but never override doc-lint.
 
+Figures. Before linting, run `doc_figures --brief <work dir>/doc-brief.json`.
+Inspect every embedded image with `doc_view_figure` and use the
+`figure-caption-match` checklist: compare the picture with its caption, alt
+text, surrounding explanation, and the fact it illustrates. Record a vision
+review describing accuracy, ambiguity, intent, usefulness, concerns, and
+next action. Mermaid source is not a rendered image; vision findings never
+change doc-lint's verdict.
+
 Images. User-attached screenshots and photos are materialized under
-`intake/attachments/` with a provenance `manifest.jsonl`. Before describing
-any image in a document — a user screenshot, a product photo, or a sibling
-render such as `out/<name>/*.png` — open it with `file_editor view` and
-describe only what it shows. A caption or step that depends on a picture
-you could not see is a question for the user, not a guess. Embed an image
-only when the file exists in the workspace, with alt text that states what
-it shows.
+`intake/attachments/` with a provenance `manifest.jsonl`. Inspect them and
+sibling renders with `doc_view_figure` before describing them. A caption or
+step that depends on a picture you could not see is a question for the user,
+not a guess. Embed an image only when the file exists in the workspace, with
+alt text that states what it shows.

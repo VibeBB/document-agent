@@ -30,6 +30,14 @@ vision/image-observation event. Describe accuracy, ambiguity, design intent, use
 reader or maker, concerns, and next actions. A changed image has a new hash and needs a fresh
 review. Never use a vision impression as a pass/fail gate.
 
+Use `doc_figures --brief <work dir>/doc-brief.json` to inventory Markdown and HTML image
+references and Mermaid blocks. `doc_view_figure` accepts workspace PNG, JPEG, GIF, and WebP
+images up to 5 MiB. It appends an image-observation event and returns a source event ID; bind
+the review to that event or the image path. SVG must be rendered to PNG by the owning sister.
+Review checklists are `figure-caption-match` (writer), `figure-reader` (review), and
+`launch-visual` (launch). Intake and liaison should inspect user photos and sister figures that
+carry facts, and preserve any disagreement as a conflict.
+
 Use the MCP tools `doc_record_decision`, `doc_record_impression`, and
 `doc_record_vision_review`, or:
 

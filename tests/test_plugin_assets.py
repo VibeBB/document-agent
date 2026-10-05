@@ -68,9 +68,11 @@ def test_review_agent_is_read_only() -> None:
     assert "  - file_editor\n" in head.group(1).split("hooks:")[0]
     normalized = " ".join(text.split())
     assert (
-        "Read-only: you run read commands (`cat`, `ls`, `git --no-pager diff`, "
-        "the linter with `--no-write`) and use `file_editor` only with `view`; nothing "
-        "else." in normalized
+        "Read-only for documents: you run read commands (`cat`, `ls`, "
+        "`git --no-pager diff`, the linter with `--no-write`) and use "
+        "`file_editor` only with `view`. You may call "
+        "`doc_view_figure` and write only `doc_record_vision_review` and "
+        "`doc_record_impression`." in normalized
     )
     assert _frontmatter(PLUGIN_ROOT / "agents" / "doc-review.md")["model"] == (
         "vibebb-review"

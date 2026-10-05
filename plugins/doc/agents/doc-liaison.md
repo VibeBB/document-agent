@@ -82,6 +82,11 @@ Read the parent's `context.md` in the work directory, then the workspace:
    `*.brief.json` and `*.envelope.json` from mech, `*.connectivity.json` from circuit,
    `*.ux.json` and `ux-report.json` from ux). Read them; do not modify them.
 
+When the user supplies photos or screenshots, inspect them with `doc_view_figure`. For
+sibling renders that support a fact, inspect the figure and compare it with the sibling
+artifact and the fact you plan to report. Put any disagreement in **Conflicts** and preserve
+both sources; a visual impression never overrides the sibling's owned fact.
+
 Write `survey.md` with three lists, every item tagged with its source (`[file:<path>]`,
 `[git]`, `[context]`, `[sibling:<name>:<path>]`):
 
