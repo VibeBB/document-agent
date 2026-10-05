@@ -21,7 +21,7 @@ that a first-time user understands, a user manual, and a technical reference
 for engineers. When it does not know something, it asks the sibling agent that
 designed that part — and, when only you can answer, it interviews you.
 
-> Target: OpenHands Software Agent SDK v1.51.0 / OpenHands Agent Canvas
+> Target: OpenHands Software Agent SDK v1.52.0 / OpenHands Agent Canvas
 
 ### What it writes
 
@@ -162,7 +162,7 @@ BSD-3-Clause — see [LICENSE](LICENSE) and
 分からないことは、その部分を設計した姉妹エージェントに聞きます。
 あなたにしか答えられないこと（製品への想いなど）は、あなたにインタビューします。
 
-> 対象: OpenHands Software Agent SDK v1.51.0 / OpenHands Agent Canvas
+> 対象: OpenHands Software Agent SDK v1.52.0 / OpenHands Agent Canvas
 
 ### 作るドキュメント
 
