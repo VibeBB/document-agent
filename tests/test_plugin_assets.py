@@ -39,6 +39,57 @@ def _frontmatter(path: Path) -> dict[str, str]:
     return fields
 
 
+def _frontmatter_mcp_config(path: Path) -> dict[str, dict[str, str | list[str]]]:
+    text = path.read_text(encoding="utf-8")
+    match = FRONTMATTER_RE.match(text)
+    assert match, f"{path} has no YAML frontmatter"
+
+    config: dict[str, dict[str, str | list[str]]] = {}
+    server: str | None = None
+    field: str | None = None
+    in_mcp_config = False
+    for line in match.group(1).splitlines():
+        if not in_mcp_config:
+            in_mcp_config = line == "mcp_config:"
+            continue
+        if not line or not line[0].isspace():
+            break
+        indent = len(line) - len(line.lstrip())
+        value = line.strip()
+        if indent == 2:
+            assert value.endswith(":")
+            server_name = value[:-1]
+            server = server_name
+            config[server_name] = {}
+            field = None
+        elif indent == 4:
+            assert server is not None
+            server_name = server
+            key, separator, raw_value = value.partition(":")
+            assert separator
+            if raw_value.strip():
+                config[server_name][key] = raw_value.strip()
+                field = None
+            else:
+                config[server_name][key] = []
+                field = key
+        elif indent == 6:
+            assert server is not None and field is not None
+            server_name = server
+            field_name = field
+            assert value.startswith("- ")
+            items = config[server_name][field_name]
+            assert isinstance(items, list)
+            item = value[2:].strip()
+            if item.startswith("'") and item.endswith("'"):
+                item = item[1:-1].replace("''", "'")
+            items.append(item)
+        else:
+            raise AssertionError(f"unexpected mcp_config indentation in {path}: {line}")
+    assert config, f"{path} has no mcp_config"
+    return config
+
+
 def test_plugin_json() -> None:
     manifest = json.loads(
         (PLUGIN_ROOT / ".plugin" / "plugin.json").read_text(encoding="utf-8")
@@ -200,10 +251,11 @@ def test_hooks_json_matches_agent_frontmatter() -> None:
 
 def test_mcp_server_config_is_shared_by_every_agent() -> None:
     config = json.loads((PLUGIN_ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    servers = config["mcpServers"]
+    assert set(servers) == {"doc"}
     for path in PLUGIN_ROOT.glob("agents/*.md"):
-        text = path.read_text(encoding="utf-8")
-        assert "mcp_config:\n  doc:\n" in text, path.name
-    assert config["doc"]["args"][-1].endswith('doc_tool.py" mcp_server')
+        assert _frontmatter_mcp_config(path) == {"doc": servers["doc"]}, path.name
+    assert servers["doc"]["args"][-1].endswith('doc_tool.py" mcp_server')
 
 
 def _markdown_files() -> list[Path]:

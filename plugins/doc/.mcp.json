@@ -1,9 +1,11 @@
 {
-  "doc": {
-    "command": "sh",
-    "args": [
-      "-c",
-      "p=$(for c in \"${DOC_PLUGIN_ROOT:-}\" \"${OPENHANDS_PROJECT_DIR:-.}/plugins/doc\" \"${HOME:-}/.agents/plugins/doc\" \"${HOME:-}/.openhands/plugins/installed/doc\"; do [ -f \"$c/scripts/doc_tool.py\" ] && printf %s \"$c\" && break; done); [ -n \"$p\" ] || { echo \"doc plugin root unresolved\" >&2; exit 2; }; exec python3 \"$p/scripts/doc_tool.py\" mcp_server"
-    ]
+  "mcpServers": {
+    "doc": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "p=$(for c in \"${DOC_PLUGIN_ROOT:-}\" \"${OPENHANDS_PROJECT_DIR:-.}/plugins/doc\" \"${HOME:-}/.agents/plugins/doc\" \"${HOME:-}/.openhands/plugins/installed/doc\"; do [ -f \"$c/scripts/doc_tool.py\" ] && printf %s \"$c\" && break; done); [ -n \"$p\" ] || { echo \"doc plugin root unresolved\" >&2; exit 2; }; exec python3 \"$p/scripts/doc_tool.py\" mcp_server"
+      ]
+    }
   }
 }

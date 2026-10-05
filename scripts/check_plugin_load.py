@@ -67,15 +67,53 @@ def check_plugin(plugin_dir: Path) -> list[str]:
     manifest = json.loads(
         (plugin_dir / ".plugin" / "plugin.json").read_text(encoding="utf-8")
     )
+    mcp_config = json.loads((plugin_dir / ".mcp.json").read_text(encoding="utf-8")).get(
+        "mcpServers"
+    )
+    if not isinstance(mcp_config, dict) or set(mcp_config) != {"doc"}:
+        server_names = (
+            sorted(mcp_config) if isinstance(mcp_config, dict) else mcp_config
+        )
+        reasons.append(f".mcp.json servers {server_names!r} != ['doc']")
+        expected_doc_server = None
+    elif not isinstance(mcp_config["doc"], dict):
+        reasons.append(".mcp.json server 'doc' must be an object")
+        expected_doc_server = None
+    else:
+        expected_doc_server = mcp_config["doc"]
+
     if plugin.manifest.version != manifest.get("version"):
         reasons.append(
             f"manifest version {plugin.manifest.version!r} != "
             f"plugin.json {manifest.get('version')!r}"
         )
 
+    plugin_mcp_config = plugin.mcp_config or {}
+    if set(plugin_mcp_config) != {"doc"}:
+        reasons.append(f"plugin mcp_config keys {sorted(plugin_mcp_config)} != ['doc']")
+
     agents = {a.name for a in plugin.agents}
     if agents != EXPECTED_AGENTS:
         reasons.append(f"agents {sorted(agents)} != {sorted(EXPECTED_AGENTS)}")
+
+    for agent in plugin.agents:
+        agent_mcp_config = agent.mcp_config or {}
+        if set(agent_mcp_config) != {"doc"}:
+            reasons.append(
+                f"agent {agent.name!r} mcp_config keys "
+                f"{sorted(agent_mcp_config)} != ['doc']"
+            )
+            continue
+        if not isinstance(expected_doc_server, dict):
+            continue
+        agent_server = agent_mcp_config["doc"]
+        if agent_server.command != expected_doc_server.get(
+            "command"
+        ) or agent_server.args != expected_doc_server.get("args"):
+            reasons.append(
+                f"agent {agent.name!r} mcp_config['doc'] command/args "
+                "differ from .mcp.json"
+            )
 
     skills = {s.name for s in plugin.skills}
     if skills != EXPECTED_SKILLS:
