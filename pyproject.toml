@@ -1,7 +1,7 @@
 [project]
 name = "document-agent"
 version = "0.1.0"
-description = "An OpenHands plugin that writes product documentation (README, user manual, technical reference) with sibling-agent inquiries and user interviews"
+description = "An OpenHands plugin that writes product documentation (README, user manual, technical reference) with sister-agent inquiries and user interviews"
 requires-python = ">=3.12"
 license = "BSD-3-Clause"
 dependencies = []
@@ -22,8 +22,10 @@ required-version = "==0.12.23"
 
 [tool.ruff]
 line-length = 88
+# Canonical shared copies are guarded by scripts/check_shared_hooks.py.
+extend-exclude = ["plugins/doc/hooks/scripts/_records.py", "plugins/doc/hooks/scripts/require_records.py"]
 target-version = "py312"
-src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "scripts", "tests"]
+src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plugins/doc/scripts", "scripts", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -31,8 +33,9 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
-include = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "scripts", "tests"]
+include = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plugins/doc/scripts", "scripts", "tests"]
 exclude = ["**/__pycache__", "**/.venv"]
+extraPaths = ["plugins/doc/hooks/scripts", "plugins/doc/scripts", "plugins/doc/skills/doc-lint/scripts"]
 # The brief JSON boundary is intentionally untyped; strict Unknown-reporting
 # would only repeat what the validator already checks at runtime.
 reportUnknownArgumentType = false

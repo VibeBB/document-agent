@@ -9,15 +9,33 @@ tools:
   - glob
   - task_tracker
   - task_tool_set
+mcp_config:
+  doc:
+    command: sh
+    args:
+      - -c
+      - 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/scripts/doc_tool.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/scripts/doc_tool.py" mcp_server'
 max_iteration_per_run: 120
 max_budget_per_run: 6.0
 hooks:
+  session_start:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
+  stop:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" stop'
   pre_tool_use:
     - matcher: file_editor|apply_patch|terminal
       hooks:
         - type: command
           name: protect-lint-report
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
     - matcher: terminal
       hooks:
         - type: command
@@ -82,8 +100,10 @@ The prompt names the work directory (`doc-work/<slug>/`) and the targets. Read, 
 
 Write `<work dir>/doc-brief.json` following the contract in the doc-lint SKILL:
 
-- One `sources` entry per place a fact came from. Answers from a sibling agent are
-  `sibling_agent` with its `agent`; a sibling's workspace file is `sibling_artifact`; the
+- One `sources` entry per place a fact came from. Answers from a sister agent are
+  `sister_agent` with its `agent`; a sister's workspace file is `sister_artifact` with its
+  current `sha256`; a VRP rationale is a `sister_record` with its event ID and canonical
+  observations log path. Workspace `file` sources may also carry a current `sha256`. The
   user's interview answers are `user_interview`.
 - One `facts` entry per concrete claim the documents will make (numbers, steps, names,
   interfaces), each with at least one source.
@@ -131,7 +151,7 @@ facts only.
 Write the technical reference target (default `docs/technical-reference.md`) following the
 doc-craft template: architecture with a Mermaid diagram, components, interfaces and
 specifications (tables, units always), data and configuration formats, development (build,
-test, release) and the sources for each subsystem (which sibling agent owns it).
+test, release) and the sources for each subsystem (which sister agent owns it).
 
 ## Stage 6 — Lint
 
@@ -163,11 +183,24 @@ Return to the parent, in the conversation language:
   the parent can put to the user,
 - the review findings you declined, with reasons.
 
+## Records you must leave
+
+After each completed writing stage, append a hash-bound stage impression. Record decisions about
+fact interpretation, organization, and consequential wording, including options, evidence,
+unknowns, residual risks, and revisit conditions. Figure reviews describe accuracy, ambiguity,
+intent, usefulness, and next actions but never override doc-lint.
+
+Figures. Before linting, run `doc_figures --brief <work dir>/doc-brief.json`.
+Inspect every embedded image with `doc_view_figure` and use the
+`figure-caption-match` checklist: compare the picture with its caption, alt
+text, surrounding explanation, and the fact it illustrates. Record a vision
+review describing accuracy, ambiguity, intent, usefulness, concerns, and
+next action. Mermaid source is not a rendered image; vision findings never
+change doc-lint's verdict.
+
 Images. User-attached screenshots and photos are materialized under
-`intake/attachments/` with a provenance `manifest.jsonl`. Before describing
-any image in a document — a user screenshot, a product photo, or a sibling
-render such as `out/<name>/*.png` — open it with `file_editor view` and
-describe only what it shows. A caption or step that depends on a picture
-you could not see is a question for the user, not a guess. Embed an image
-only when the file exists in the workspace, with alt text that states what
-it shows.
+`intake/attachments/` with a provenance `manifest.jsonl`. Inspect them and
+sister renders with `doc_view_figure` before describing them. A caption or
+step that depends on a picture you could not see is a question for the user,
+not a guess. Embed an image only when the file exists in the workspace, with
+alt text that states what it shows.

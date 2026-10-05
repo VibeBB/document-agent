@@ -1,5 +1,5 @@
 ---
-description: Probe the doc plugin install — plugin root, layout, and which sibling plugins (wire, mech, circuit, ux, bard) can be asked.
+description: Probe the doc plugin install — plugin root, layout, and which sister plugins can be asked.
 allowed-tools:
   - terminal
 ---
@@ -15,5 +15,7 @@ p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "$
 ```
 
 Report the `additionalContext` findings verbatim — plugin root resolution,
-plugin layout, and the sibling list. A `missing` sibling means questions it
-would own go to the user in the interview instead.
+plugin layout, the sister list, and the liaison inbox counts. A `missing`
+sister means questions it would own go to the user in the interview instead.
+An unanswered liaison request means a sister is waiting: list it with
+`doc_tool.py ux inbox` and answer it with `doc_tool.py ux respond`.

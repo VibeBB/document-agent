@@ -1,215 +1,218 @@
 # document-agent
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/VibeBB/document-agent)
-
-Part of the [VibeBB](https://github.com/VibeBB) agent family:
-[bard-agent](https://github.com/VibeBB/bard-agent) ·
-[electrical-circuit-agent](https://github.com/VibeBB/electrical-circuit-agent) ·
-[mechanical-agent](https://github.com/VibeBB/mechanical-agent) ·
-[wire-agent](https://github.com/VibeBB/wire-agent) ·
-[UX-creator-agent](https://github.com/VibeBB/UX-creator-agent) ·
-[document-agent](https://github.com/VibeBB/document-agent)
-
 **English** | [日本語](#日本語)
 
-<a id="english"></a>
 ## English
 
-`document-agent` adds **doc**, a documentation writer, to OpenHands (Agent
-Canvas). It writes your product's documentation into the workspace: a README
-that a first-time user understands, a user manual, and a technical reference
-for engineers. When it does not know something, it asks the sibling agent that
-designed that part — and, when only you can answer, it interviews you.
+> OpenHands Software Agent SDK v1.52.0
 
-> Target: OpenHands Software Agent SDK v1.52.0 / OpenHands Agent Canvas
+### Turn your hardware project into clear product documents
 
-### What it writes
+VibeBB is a family of AI plugins that help makers design hardware products.
+Each plugin contributes its own specialty. **doc** is the family’s
+documentation specialist: it turns the evidence already in your project into
+documents that a first-time reader, product user, or engineer can understand.
 
-| Document | For | Contents |
-| --- | --- | --- |
-| `README.md` | first-time visitors | what the product is, a diagram, who it is for, a 2..7-step quick start |
-| `docs/user-manual.md` | people using the product | setup, how to use, care and safety, troubleshooting, specifications |
-| `docs/technical-reference.md` | engineers | architecture diagram, interfaces, data and configuration, development |
+Give doc your product workspace, design files, current documentation, and the
+facts you already know. It checks project files, asks an available sister
+plugin about facts that sister owns, and asks you about intent or details no
+one else can know. You receive drafts with cited facts, open questions, and a
+record of important decisions—not claims invented to fill gaps.
 
-With `/doc:launch` it also writes launch material from the same facts:
+| You provide | doc can produce |
+| --- | --- |
+| Product name, intended users, and what the product should do | A first-time-reader README with a diagram and quick start |
+| Existing source, design files, reports, and project notes | A user manual and an engineer-facing technical reference |
+| Answers about intent, audience, constraints, and safety | A product page, press release, demo script, and launch plan |
+| Sister-plugin artifacts and answers, when available | Source-linked facts, identified conflicts, and questions still needing an answer |
 
-| Document | For | Contents |
-| --- | --- | --- |
-| `docs/launch/product-page.md` | prospective buyers | tagline, key messages, use-flow diagram, benefits, specifications, call to action |
-| `docs/launch/press-release.md` | journalists | headline, lead, body with the maker's quote, About, media contact |
-| `docs/launch/demo-script.md` | the video maker | shot table with time, visual, and narration / audio (using the product's own bard sound cues) |
-| `docs/launch/launch-plan.md` | you | audiences, key messages, channels, launch checklist |
+`doc` documents evidence; it does not design, test, certify, or approve the
+hardware itself.
 
-Documents follow the conversation language (English or Japanese). Every
-product claim comes from a sourced fact; anything nobody could confirm is
-listed back to you as an open question instead of being guessed.
+### How the VibeBB plugins cooperate
 
-### How it works
+The workspace is the shared hand-off point. doc reads artifacts owned by the
+other plugins and can ask their agents for missing facts. The product maker
+remains the authority on intent, audience, and other personal choices.
 
 ```mermaid
 flowchart LR
-    U[You: /doc:write] --> P[Parent agent writes context.md]
-    P --> L[doc-liaison: survey workspace and ask siblings]
-    L -->|questions only you can answer| I[/doc:interview/]
-    I --> W[doc-writer: brief, outline, documents]
-    L --> W
-    W --> R[doc-review: first-time reader, user, engineer]
-    R --> W
-    W --> D[README, user manual, technical reference]
+    Maker[Maker and product workspace] --> Doc[doc: gather facts and write]
+    Doc <--> UX[ux: journeys and user needs]
+    Doc <--> Bard[bard: sound and cues]
+    Doc <--> Circuit[circuit: electronics and PCB]
+    Doc <--> Dashboard[dashboard: app screens and routes]
+    Doc <--> Firmware[firmware: behavior and pin maps]
+    Doc <--> FPGA[fpga: logic and timing]
+    Doc <--> Mech[mech: enclosure and assembly]
+    Doc <--> Prodeng[prodeng: manufacturing]
+    Doc <--> Sim[sim: simulation results]
+    Doc <--> Wire[wire: harnesses and connections]
+    Doc --> Outputs[README, manual, technical reference, launch documents]
+    Maker --> Interview[doc interview: intent and unanswered questions]
+    Interview --> Doc
 ```
 
-- A `task` sub-agent does not receive the parent's conversation, so the parent
-  summarizes it in `doc-work/<slug>/context.md`
-  ([ADR-0001](docs/adr/ADR-0001-task-subagent-plugin.md)).
-- `doc-liaison` reads sibling artifacts first (wiring contracts, enclosure
-  envelopes, circuit briefs, UX stories) and asks the owning sibling
-  (`wire-review`, `mech-review`, `circuit-review`, `ux-research`) one focused
-  question when a fact is still missing
-  ([ADR-0003](docs/adr/ADR-0003-sibling-inquiry-and-user-interview.md)).
-- `doc-writer` records every claim as a fact with a source in
-  `doc-brief.json`, then writes the documents. `doc_lint.py` (Python standard
-  library only) checks the brief and each document: the README must explain
-  the product with a diagram before the quick start, the manual must have
-  usage and troubleshooting, and the technical reference must have an
-  architecture diagram, interfaces, and development steps
-  ([contract](docs/doc-brief-contract.md),
-  [ADR-0002](docs/adr/ADR-0002-fact-grounded-doc-brief.md)).
-- `doc-review` reads as a first-time visitor, a user, and an engineer and
-  returns findings; it never edits the documents.
-- The lint report `doc-lint.json` can only be written by the linter
-  ([ADR-0004](docs/adr/ADR-0004-lint-report-protection.md)).
-- `doc-launch` writes launch material from a schema 0.2 brief whose `launch`
-  block ties every audience, key message, channel, and call to action to
-  facts. The linter rejects numbers and superlatives that no fact states and
-  checks each kind's structure
-  ([ADR-0006](docs/adr/ADR-0006-fact-grounded-launch-material.md)).
+The ten sister plugins are **bard**, **circuit**, **dashboard**, **firmware**,
+**fpga**, **mech**, **prodeng**, **sim**, **ux**, and **wire**. A sister must
+be installed in the same OpenHands workspace for doc to delegate a question to
+its agent; otherwise doc can use files already in the workspace and will
+identify facts it could not confirm. The technical guide describes the
+hash-bound liaison protocol and its current compatibility limits.
 
-Quality documents (quality plans, test reports, risk assessments,
-inspection records) are planned; their kinds are reserved in the contract
-([ADR-0005](docs/adr/ADR-0005-quality-document-extension.md)).
+### Quick start
 
-### Installation via Agent Canvas WebGUI
+1. Install **doc** in OpenHands AgentCanvas from
+   `github:VibeBB/document-agent`, using the `plugins/doc` path. Enable the
+   `task_tool_set` profile tool if you want doc to delegate fact-gathering,
+   writing, and review to sub-agents; doc also has a fallback when it is not
+   available.
+2. Open a workspace containing your product files and start a new
+   conversation. Run `/doc:doctor` to check the plugin and sister availability.
+3. Run `/doc:write` to prepare a README, user manual, and technical reference,
+   or `/doc:launch` for fact-grounded launch materials.
+4. Answer questions in your own words (or skip them), then review the
+   generated documents and any open questions with your team.
 
-1. Open **Customize** in the left sidebar and select the **Plugins** tab.
-2. Click **Add plugin**, enter the following values, and click **Install**.
-
-   | Field | Value |
-   | --- | --- |
-   | Source | `github:VibeBB/document-agent` |
-   | Ref | the latest tag from [Releases](https://github.com/VibeBB/document-agent/releases), or `main` |
-   | Path | `plugins/doc` |
-
-3. Installation is complete when **doc** appears as enabled.
-4. Optionally enable sub-agents by adding `task_tool_set` to the agent
-   profile's `tools` so doc can split the work into liaison, writer, and
-   reviewer and ask sibling agents. (`enable_sub_agents` is deprecated since
-   SDK 1.51.0 and folds into the same tool.) doc also works without them
-   (see the fallback in [docs/operations.md](docs/operations.md)).
-
-For a non-GUI installation, place `plugins/doc` in the project directory
-(`$OPENHANDS_PROJECT_DIR/plugins/doc`), point `DOC_PLUGIN_ROOT` at the plugin
-directory, or use the SDK:
-
-```python
-PluginSource("github:VibeBB/document-agent", ref="main", repo_path="plugins/doc")
-```
-
-### Usage
-
-1. Open a new chat on the workspace that contains your product.
-2. Type `/doc:write` (or `/doc:write readme` for the README only).
-3. If doc asks you about the product — why you made it, who it is for —
-   answer in your own words, or say "skip".
-4. Read the result: `README.md`, `docs/user-manual.md`,
-   `docs/technical-reference.md`, plus the open questions it lists.
+Use `/doc:interview [slug] [topic]` when you want to record product intent
+directly. `/doc:doctor` reports plugin setup and inbound sister requests.
 
 | Command | What it does |
 | --- | --- |
-| `/doc:write [all\|readme\|manual\|tech] [subject]` | Gather facts, interview when needed, write, lint, review |
-| `/doc:launch [all\|page\|press\|demo\|plan] [subject]` | Write the product page, press release, demo script, and launch plan from sourced facts |
-| `/doc:interview [slug] [topic]` | Ask you up to five questions and record the answers verbatim |
-| `/doc:doctor` | Check the plugin install and which sibling plugins are available |
+| `/doc:write [all\|readme\|manual\|tech] [subject]` | Gather evidence, ask questions, write product documents, lint, and review |
+| `/doc:launch [all\|page\|press\|demo\|plan] [subject]` | Prepare a product page, press release, demo script, or launch plan from sourced facts |
+| `/doc:interview [slug] [topic]` | Ask up to five questions and save your answers verbatim |
+| `/doc:doctor` | Check the installation, available sister plugins, and doc liaison inbox |
 
-Work files live in `doc-work/<slug>/` (`context.md`, `survey.md`,
-`inquiries.md`, `interview.md`, `doc-brief.json`, `outline.md`, `review.md`,
-`doc-lint.json`).
+### Safety and limits
 
-### Development
+- Product claims must cite a source in the documentation brief. Unknowns and
+  conflicting evidence are surfaced instead of silently resolved.
+- A generated manual or technical reference is not an engineering review,
+  safety assessment, regulatory certification, or test result. Have qualified
+  people verify safety-critical instructions and hardware decisions.
+- Figures and vision reviews are evidence for readers; they are advisory and
+  never turn into a pass/fail hardware verdict.
+- Quality plans, test reports, risk assessments, and inspection records are
+  reserved for a future contract version.
+- `/doc:launch` only uses prices, dates, availability, superlatives, and other
+  claims that are present in sourced facts.
 
-```bash
-uv sync --group sdk-check
-uv run ruff check . && uv run ruff format --check .
-uv run pyright
-uv run pytest -q
-uv run python scripts/verify_docs.py
-uv run --group sdk-check python scripts/check_plugin_load.py
-```
+### Availability
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md), and the
-documentation index in [docs/README.md](docs/README.md).
+The plugin version is **0.1.0**. There is no doc tools image: its plugin
+scripts and MCP server run with host `python3` and the Python standard
+library. The OpenHands host must provide the SDK runtime and a working
+workspace. Vision availability depends on the configured model profile.
 
-### License
-
-BSD-3-Clause — see [LICENSE](LICENSE) and
+Technical details, contracts, operational limits, and development commands
+are in the [documentation index](docs/README.md). The plugin is licensed
+under [BSD-3-Clause](LICENSE); third-party notices are in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-<a id="日本語"></a>
 ## 日本語
 
-`document-agent` は OpenHands（Agent Canvas）にドキュメント担当エージェント
-**doc** を追加するプラグインです。製品のドキュメントをワークスペースに書きます。
-初めての人にも分かる README、取扱説明書、エンジニア向けの技術資料の3つです。
-分からないことは、その部分を設計した姉妹エージェントに聞きます。
-あなたにしか答えられないこと（製品への想いなど）は、あなたにインタビューします。
+### ハードウェア製品のプロジェクトから、伝わるドキュメントを作る
 
-> 対象: OpenHands Software Agent SDK v1.52.0 / OpenHands Agent Canvas
+VibeBB は、作り手が AI と一緒にハードウェア製品を設計するための
+プラグイン群です。それぞれのプラグインが専門領域を担当します。
+**doc** は VibeBB のドキュメント担当で、プロジェクトにある根拠をもとに、
+初めて読む人、製品を使う人、エンジニアに伝わる文書を作ります。
 
-### 作るドキュメント
+製品のワークスペース、設計ファイル、既存の文書、分かっている事実を
+doc に渡してください。doc はプロジェクトのファイルを確認し、姉妹
+プラグインが所有する事実については利用可能なエージェントに質問します。
+作り手の意図など、ほかの誰にも分からないことはあなたに確認します。
+出典付きの事実、未解決の質問、重要な設計判断の記録を含む文書が得られます。
+不足した情報を埋めるために、事実を作り出すことはありません。
 
-| ドキュメント | 読者 | 内容 |
-| --- | --- | --- |
-| `README.md` | 初めて見る人 | どんな製品か、図解、誰のためか、2〜7手順のクイックスタート |
-| `docs/user-manual.md` | 使う人 | 準備、使い方、安全上の注意、トラブルシューティング、仕様 |
-| `docs/technical-reference.md` | エンジニア | アーキテクチャ図、インターフェース、データと設定、開発手順 |
+| あなたが渡すもの | doc が作成できるもの |
+| --- | --- |
+| 製品名、想定ユーザー、製品にさせたいこと | 図解とクイックスタートを含む README |
+| ソース、設計ファイル、レポート、プロジェクトのメモ | 取扱説明書、エンジニア向け技術資料 |
+| 意図、対象読者、制約、安全性に関する回答 | 製品ページ、プレスリリース、デモ台本、ローンチ計画 |
+| 利用可能な姉妹プラグインの成果物や回答 | 出典付きの事実、矛盾の指摘、確認が必要な質問 |
 
-`/doc:launch` を使うと、同じ事実からローンチ用の資料も書きます。
+`doc` は根拠を整理して文書にします。ハードウェアの設計、試験、認証、
+安全性の承認を行うものではありません。
 
-| ドキュメント | 読者 | 内容 |
-| --- | --- | --- |
-| `docs/launch/product-page.md` | 購入を検討する人 | キャッチコピー、キーメッセージ、利用の流れの図、特長、仕様、行動喚起 |
-| `docs/launch/press-release.md` | 記者 | 見出し、リード文、作り手の言葉を含む本文、製品について、報道窓口 |
-| `docs/launch/demo-script.md` | 動画の制作者 | 時間・映像・ナレーション/音の表（製品の音は bard のサウンドキューを使用） |
-| `docs/launch/launch-plan.md` | あなた | ターゲット、キーメッセージ、チャネル、ローンチのチェックリスト |
+### VibeBB プラグインの連携
 
-価格・発売日・販売先・最上級表現（「世界初」「最高」など）は、出典付きの事実に
-あるものだけを書きます。事実にない数字や最上級表現は lint で不合格になります。
+ワークスペースを共有の受け渡し場所として使います。doc は各プラグインが
+担当する成果物を読み、足りない情報を担当エージェントに質問できます。
+製品の意図や対象読者など、作り手自身の判断は作り手が決めます。
 
-文書は会話の言語（日本語または英語）で書かれます。製品についての記述はすべて
-出典付きの事実に基づきます。誰にも確認できなかったことは推測で書かず、
-未解決の質問としてあなたに返します。
+```mermaid
+flowchart LR
+    Maker[作り手と製品ワークスペース] --> Doc[doc: 根拠を集めて文書化]
+    Doc <--> UX[ux: 利用者の行動とニーズ]
+    Doc <--> Bard[bard: 音とキュー]
+    Doc <--> Circuit[circuit: 電子回路と基板]
+    Doc <--> Dashboard[dashboard: アプリ画面とルート]
+    Doc <--> Firmware[firmware: 動作とピン配置]
+    Doc <--> FPGA[fpga: ロジックとタイミング]
+    Doc <--> Mech[mech: 筐体と組み立て]
+    Doc <--> Prodeng[prodeng: 製造]
+    Doc <--> Sim[sim: シミュレーション結果]
+    Doc <--> Wire[wire: ハーネスと配線]
+    Doc --> Outputs[README、取扱説明書、技術資料、ローンチ文書]
+    Maker --> Interview[doc interview: 意図と未解決の質問]
+    Interview --> Doc
+```
 
-### 使い方
+姉妹プラグインは **bard**、**circuit**、**dashboard**、**firmware**、
+**fpga**、**mech**、**prodeng**、**sim**、**ux**、**wire** の10個です。
+エージェントへの質問には、対象プラグインが同じ OpenHands ワークスペースに
+インストールされている必要があります。インストールされていない場合も、
+ワークスペース内のファイルは参照し、確認できなかった事実を明示します。
+ハッシュ付きの連携プロトコルと現在の互換性については技術ガイドを参照してください。
 
-1. 製品のワークスペースで新しいチャットを開きます。
-2. `/doc:write` と入力します（README だけなら `/doc:write readme`）。
-3. 製品について質問されたら、自分の言葉で答えます（答えない場合は「スキップ」）。
-4. `README.md`、`docs/user-manual.md`、`docs/technical-reference.md` と、
-   一覧で返される未解決の質問を確認します。
+### クイックスタート
+
+1. OpenHands AgentCanvas で `github:VibeBB/document-agent` を指定して
+   **doc** をインストールし、パスに `plugins/doc` を指定します。
+   エージェントに事実収集・執筆・レビューを委任する場合は、プロファイルの
+   ツールに `task_tool_set` を追加してください。利用できない場合の動作もあります。
+2. 製品ファイルがあるワークスペースを開き、新しい会話を始めます。
+   `/doc:doctor` でプラグインと姉妹プラグインの状態を確認します。
+3. README、取扱説明書、技術資料を作るには `/doc:write`、
+   出典付きのローンチ資料を作るには `/doc:launch` を実行します。
+4. 質問には自分の言葉で答えるか、スキップします。生成された文書と
+   未解決の質問をチームで確認してください。
+
+製品に込めた意図を記録するには `/doc:interview [slug] [話題]` を使います。
+`/doc:doctor` はインストール状態と doc 宛ての姉妹リクエストも報告します。
 
 | コマンド | 内容 |
 | --- | --- |
-| `/doc:write [all\|readme\|manual\|tech] [題材]` | 事実を集め、必要ならインタビューし、書いて、lint とレビューをします |
-| `/doc:launch [all\|page\|press\|demo\|plan] [題材]` | 出典付きの事実から製品ページ、プレスリリース、デモ動画台本、ローンチ計画を書きます |
-| `/doc:interview [slug] [話題]` | 最大5問を質問し、回答をそのまま記録します |
-| `/doc:doctor` | プラグインの導入状態と、使える姉妹プラグインを確認します |
+| `/doc:write [all\|readme\|manual\|tech] [題材]` | 根拠を集め、質問し、製品文書を作成・lint・レビューします |
+| `/doc:launch [all\|page\|press\|demo\|plan] [題材]` | 出典付きの事実からローンチ資料を作成します |
+| `/doc:interview [slug] [話題]` | 最大5問を質問し、回答をそのまま保存します |
+| `/doc:doctor` | 導入状態、利用可能な姉妹プラグイン、doc の受信箱を確認します |
 
-### インストール
+### 安全性と制限
 
-Agent Canvas の **Customize** → **Plugins** → **Add plugin** で、Source に
-`github:VibeBB/document-agent`、Ref に最新タグ（または `main`）、Path に
-`plugins/doc` を入力して **Install** します。姉妹エージェントへの問い合わせを
-使うにはプロファイルの `tools` に `task_tool_set` を追加します（SDK 1.51.0 以降
-`enable_sub_agents` は非推奨で、同じツールに展開されます）。無効でも動作します。
+- 製品についての主張は、文書ブリーフ内の出典に結び付けます。不明点や
+  根拠同士の矛盾は、勝手に解決せず明示します。
+- 生成された取扱説明書や技術資料は、エンジニアリングレビュー、安全性評価、
+  規制認証、試験結果の代わりにはなりません。安全に関わる手順や設計は、
+  有資格者に確認してください。
+- 図や画像のレビューは読者のための助言記録であり、ハードウェアの合否判定では
+  ありません。
+- 品質計画書、試験成績書、リスクアセスメント、検査記録は将来の契約拡張用に
+  予約されています。
+- `/doc:launch` は、価格、日付、提供状況、最上級表現などを、出典付きの事実が
+  ある場合に限って使用します。
 
-品質文書（品質計画書、試験成績書、リスクアセスメント、検査記録）の作成は
-今後対応予定で、契約上の種別は予約済みです。
+### 利用状況
+
+プラグインのバージョンは **0.1.0** です。doc 用のツールイメージはありません。
+プラグインのスクリプトと MCP サーバーは、ホストの `python3` と Python 標準
+ライブラリで動きます。OpenHands ホストには SDK ランタイムと利用可能な
+ワークスペースが必要です。画像認識の利用可否は、設定されたモデルプロファイルに
+よります。
+
+技術情報、データ契約、運用上の制限、開発手順は
+[ドキュメント索引](docs/README.md)を参照してください。ライセンスは
+[BSD-3-Clause](LICENSE)、サードパーティの通知は
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)にあります。

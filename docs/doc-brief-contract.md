@@ -8,15 +8,16 @@ lints every target document against it. A complete, passing example is
 launch example is `plugins/doc/skills/doc-lint/examples/desk-timer-launch/`.
 
 Schema 0.2 is schema 0.1 plus the marketing/launch target kinds and the
-`launch` block (ADR-0006). A 0.1 brief stays valid unchanged.
+`launch` block (ADR-0006). Source kinds follow this contract in both schema
+versions; retired source-kind names are rejected.
 
 ## Work directory
 
 | File | Written by | Contents |
 | --- | --- | --- |
 | `context.md` | parent (`/doc:write`) | conversation summary, each item tagged `[conversation]`, `[file:<path>]`, or `[git]` |
-| `survey.md` | `doc-liaison` | facts found in the workspace and sibling artifacts, missing facts, conflicts |
-| `inquiries.md` | `doc-liaison`, `/doc:interview` | questions to siblings and to the user, with status and answers |
+| `survey.md` | `doc-liaison` | facts found in the workspace and sister artifacts, missing facts, conflicts |
+| `inquiries.md` | `doc-liaison`, `/doc:interview` | questions to sisters and to the user, with status and answers |
 | `interview.md` | `/doc:interview` | the user's answers, verbatim, as `A1`, `A2`, … |
 | `doc-brief.json` | `doc-writer` | this contract |
 | `outline.md` | `doc-writer` | reader journeys, diagram plans, shared terminology |
@@ -27,7 +28,8 @@ Schema 0.2 is schema 0.1 plus the marketing/launch target kinds and the
 
 ## Brief
 
-Unknown keys are rejected at the top level and in `product`.
+Unknown keys are rejected at the top level, in `product`, and in each source
+object.
 
 | Key | Type | Rule |
 | --- | --- | --- |
@@ -43,7 +45,7 @@ Unknown keys are rejected at the top level and in `product`.
 | `product.vision` | string | optional, 1..1200 chars; only with `vision_source` |
 | `product.vision_source` | string | a source id of kind `user_interview` |
 | `targets` | object[] | 1..3 `{kind, path}` (0.1), 1..7 (0.2) |
-| `sources` | object[] | at least one `{id, kind, ref[, agent]}` |
+| `sources` | object[] | at least one `{id, kind, ref[, agent, sha256, event_id]}`; allowed keys depend on `kind` |
 | `facts` | object[] | at least one `{id, text, sources}` |
 | `inquiries` | object[] | optional `{id, to, question, status[, answer, source]}` |
 | `open_questions` | string[] | optional, 0..50 items |
@@ -61,12 +63,22 @@ Unknown keys are rejected at the top level and in `product`.
 ### Sources
 
 - `id`: `S<n>`, unique.
-- `kind`: `file`, `git_log`, `conversation`, `user_interview`,
-  `sibling_agent` (an answer from a sibling agent via `task`),
-  `sibling_artifact` (a file a sibling wrote).
+- `kind`: `file`, `git_log`, `conversation`, `user_interview`, `sister_agent`,
+  `sister_artifact`, or `sister_record`.
 - `ref`: where to find it — a path, `path#anchor`, or a commit range.
-- `agent`: required for the two sibling kinds, forbidden otherwise; one of
-  `wire`, `mech`, `circuit`, `ux`, `bard`.
+- `agent`: required for each sister kind, forbidden otherwise; one of
+  `bard`, `circuit`, `dashboard`, `firmware`, `fpga`, `mech`, `prodeng`,
+  `sim`, `ux`, `wire`.
+- `sha256`: optional for `file` and required for `sister_artifact`. It is the
+  file SHA-256 or deterministic tree SHA-256 for a directory. The linter
+  checks current hashes in every mode and reports a changed source.
+- `event_id`: required only for `sister_record`; it is a lowercase SHA-256
+  event ID from the selected sister's decision, impression, or vision-review
+  log. Its `ref` must be exactly
+  `observations/<agent>/decisions.jsonl`,
+  `observations/<agent>/impressions.jsonl`, or
+  `observations/<agent>/vision-reviews.jsonl`. The linter verifies the event
+  exists there and the record's `plugin` equals `agent`.
 
 ### Facts
 
@@ -76,12 +88,13 @@ Unknown keys are rejected at the top level and in `product`.
 
 ### Inquiries
 
-- `id`: `Q<n>`, unique; `to`: a sibling name or `"user"`.
-- `status`: `answered`, `unanswered`, or `not_available` (the sibling is not
+- `id`: `Q<n>`, unique; `to`: a sister name or `"user"`.
+- `status`: `answered`, `unanswered`, or `not_available` (the sister is not
   installed or could not answer).
 - `answered` requires `answer` and a `source`: for `to: user` a
-  `user_interview` source, otherwise a sibling source whose `agent` equals
-  `to`. `answer`/`source` are forbidden for other statuses.
+  `user_interview` source, otherwise a `sister_agent` or `sister_artifact`
+  source whose `agent` equals `to`. `answer`/`source` are forbidden for
+  other statuses.
 
 ### Launch (schema 0.2)
 
@@ -114,7 +127,7 @@ Per kind (section names match English or Japanese keywords on H2/H3):
 | --- | --- |
 | `readme` | a product-explanation H2 and a diagram (Mermaid block or image) before the `Quick start` / `クイックスタート` section; the quick start has 2..7 numbered steps; links to every other target |
 | `user_manual` | a usage section (`How to use`, `使い方`, …) and a troubleshooting / FAQ section |
-| `technical_reference` | an architecture section containing a diagram; an interface / specification section; a development / build / test section |
+| `technical_reference` | an architecture section containing a diagram; an interface / specification section; a development / build / test section; if any `sister_record` source is present, a rationale section whose H2/H3 heading matches `rationale`, `設計根拠`, or `設計判断` |
 | `product_page` | shows `product.tagline`; a diagram or image; a features / benefits section; a call-to-action section containing `launch.call_to_action.text` |
 | `press_release` | the first paragraph after the headline names the product; an About section; a media contact section |
 | `demo_script` | a table whose header has time, visual, and narration / audio columns |

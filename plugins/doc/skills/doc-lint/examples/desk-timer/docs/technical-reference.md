@@ -24,4 +24,10 @@ The firmware is a single state machine: `idle -> setting -> running -> done`.
 
 Build and flash the firmware from `firmware/` with the toolchain described in
 its own README. The enclosure and circuit sources come from the mech and
-circuit sibling agents.
+circuit sister agents.
+
+## Rationale
+
+The circuit decision record `observations/circuit/decisions.jsonl` selects a
+light ring over a numeric display so the remaining-time state stays visible
+without a separate screen or phone.

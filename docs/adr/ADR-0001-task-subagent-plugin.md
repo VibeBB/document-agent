@@ -9,16 +9,16 @@ OpenHands Software Agent SDK v1.49.6 loads plugin `agents/*.md` files as
 `AgentDefinition`s that a parent calls with `task(subagent_type=...)`. Agent
 Canvas exposes `task` when sub-agents are enabled; `delegate` and `workflow`
 are not exposed. A task sub-agent does not receive the parent's conversation
-history. The sibling plugins (bard, wire, mech, circuit, ux) follow the same
+history. The sister plugins follow the same
 model.
 
-Documentation needs three different jobs: finding facts (workspace, siblings,
+Documentation needs three different jobs: finding facts (workspace, sisters,
 user), writing for three readers, and reviewing as those readers.
 
 ## Decision
 
 1. The plugin (`plugins/doc`) ships three agents: `doc-liaison` (gathers
-   facts, asks siblings), `doc-writer` (brief, outline, documents, lint), and
+   facts, asks sisters), `doc-writer` (brief, outline, documents, lint), and
    `doc-review` (read-only review, `vibebb-review` model).
 2. `/doc:write` has the parent summarize the conversation into
    `doc-work/<slug>/context.md` and pass only paths in `task` prompts. Every

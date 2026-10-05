@@ -1,5 +1,5 @@
 ---
-description: Write fact-grounded launch material for this workspace's product — product page, press release, demo video script, and launch plan — asking sibling agents and the user for anything unknown.
+description: Write fact-grounded launch material for this workspace's product — product page, press release, demo video script, and launch plan — asking sister agents and the user for anything unknown.
 argument-hint: "[all|page|press|demo|plan] [one-line subject]"
 allowed-tools:
   - terminal
@@ -38,7 +38,8 @@ goes back to the user as open questions.
    does, adding `Launch targets: <kinds>` to the prompt so it also lists price, availability,
    audience evidence, and demo-able behavior as needed facts. Ask `ux` for the core
    experience and `bard` for the product's sound cues (`cues/<slug>/cues.json`) when the demo
-   script is in scope.
+   script is in scope. At the start, also check `doc_ux_inbox` for requests addressed to doc
+   and answer them through the SLP v2 workflow.
 5. **Interview (when needed).** Price, availability date, where to buy, and the press contact
    are the user's facts. If `inquiries.md` has such `to: user` questions still `unanswered`,
    run the `/doc:interview` procedure and end your turn without a tool call. Ask once per run.
@@ -67,3 +68,7 @@ goes back to the user as open questions.
    question and unanswered inquiry, with an offer to run `/doc:interview`. The last line is
    exactly `Path: task sub-agent` or `Path: fallback (no task)` (the fallback may append
    ` — <reason>`).
+
+At every completed stage, append the records required by
+`<doc plugin root>/skills/doc-records/SKILL.md`; vision observations are advisory and do not
+change the doc-lint result.

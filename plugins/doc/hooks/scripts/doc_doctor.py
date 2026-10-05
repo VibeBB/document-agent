@@ -5,9 +5,11 @@ Resolves the plugin root through the same env-var chain the hooks use
 (`DOC_PLUGIN_ROOT`, `$OPENHANDS_PROJECT_DIR/plugins/doc`,
 `~/.agents/plugins/doc`, `~/.openhands/plugins/installed/doc`), checks the
 plugin layout (`.plugin/plugin.json`, `agents/`, `skills/`), and reports which
-sibling plugins (wire, mech, circuit, ux, bard) are installed next to it, so
-the doc agents know whom they can ask and which questions must go to the
-user instead. The hook is advisory and always exits 0.
+sister plugins are installed next to it so the doc agents know whom to ask and
+which questions must go to the user instead. It also counts liaison requests
+addressed to doc so a session starts knowing whether a sister is waiting for an
+answer. The hook is
+advisory and always exits 0.
 
 Python standard library only.
 """
@@ -23,7 +25,22 @@ ROOT_ENV = "DOC_PLUGIN_ROOT"
 PROJECT_ENV = "OPENHANDS_PROJECT_DIR"
 SELF_PATH = Path("hooks") / "scripts" / "doc_doctor.py"
 REQUIRED_PATHS = (".plugin/plugin.json", "agents", "skills")
-SIBLINGS = ("wire", "mech", "circuit", "ux", "bard")
+SISTERS = (
+    "bard",
+    "circuit",
+    "dashboard",
+    "firmware",
+    "fpga",
+    "mech",
+    "prodeng",
+    "sim",
+    "ux",
+    "wire",
+)
+LIAISON_DIR = "liaison"
+REQUEST_SUFFIX = ".ux-request.json"
+RESPONSE_SUFFIX = ".ux-response.json"
+PLUGIN = "doc"
 
 
 def _plugin_dirs(name: str) -> list[Path]:
@@ -52,11 +69,42 @@ def _resolve_root() -> Path | None:
     return None
 
 
-def sibling_status() -> dict[str, bool]:
+def sister_status() -> dict[str, bool]:
     return {
         name: any((d / ".plugin" / "plugin.json").is_file() for d in _plugin_dirs(name))
-        for name in SIBLINGS
+        for name in SISTERS
     }
+
+
+def _payload(path: Path) -> dict[str, object] | None:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def inbox_counts(project: Path) -> dict[str, int]:
+    """Count liaison requests addressed to doc without validating them fully."""
+    directory = project / LIAISON_DIR
+    counts = {"for_doc": 0, "unanswered": 0, "unreadable": 0}
+    if directory.is_symlink() or not directory.is_dir():
+        return counts
+    for path in sorted(directory.glob(f"*{REQUEST_SUFFIX}")):
+        if path.is_symlink():
+            counts["unreadable"] += 1
+            continue
+        payload = _payload(path)
+        if payload is None:
+            counts["unreadable"] += 1
+            continue
+        if payload.get("target_agent") != PLUGIN:
+            continue
+        counts["for_doc"] += 1
+        stem = path.name[: -len(REQUEST_SUFFIX)]
+        if not (directory / f"{stem}{RESPONSE_SUFFIX}").is_file():
+            counts["unanswered"] += 1
+    return counts
 
 
 def findings(root: Path | None) -> list[str]:
@@ -74,17 +122,27 @@ def findings(root: Path | None) -> list[str]:
             )
         else:
             lines.append(f"plugin layout ok at {root}")
-    status = sibling_status()
+    status = sister_status()
     lines.append(
-        "siblings: "
+        "sisters: "
         + ", ".join(
             f"{name}={'installed' if ok else 'missing'}" for name, ok in status.items()
         )
     )
     if not any(status.values()):
         lines.append(
-            "no sibling plugin found; gather facts from workspace files and ask"
+            "no sister plugins found; gather facts from workspace files and ask"
             " the user for anything they cannot answer"
+        )
+    project = Path(os.environ.get(PROJECT_ENV) or ".")
+    counts = inbox_counts(project)
+    lines.append(
+        "liaison inbox: requests for doc={for_doc} unanswered={unanswered}"
+        " unreadable={unreadable}".format(**counts)
+    )
+    if counts["unanswered"]:
+        lines.append(
+            "answer waiting liaison requests with doc_ux_inbox then doc_ux_respond"
         )
     return lines
 

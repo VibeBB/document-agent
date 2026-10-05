@@ -96,10 +96,26 @@ def _is_protected(value: str) -> bool:
     if base in ARTIFACT_NAMES:
         return True
     return (
-        len(parts) >= 3
-        and parts[-3:-1] == ("observations", "doc")
-        and parts[-1].endswith(".jsonl")
-    ) or (len(parts) >= 3 and parts[-3:] == ("intake", "attachments", "manifest.jsonl"))
+        (
+            len(parts) >= 3
+            and parts[-3:-1] == ("observations", "doc")
+            and parts[-1].endswith(".jsonl")
+        )
+        or (
+            len(parts) >= 3
+            and parts[-3:] == ("observations", "doc", "records-status.json")
+        )
+        or (
+            len(parts) >= 4
+            and parts[-4:-2] == ("observations", "doc")
+            and parts[-2] == ".sessions"
+            and parts[-1].endswith(".json")
+        )
+        or (
+            len(parts) >= 3
+            and parts[-3:] == ("intake", "attachments", "manifest.jsonl")
+        )
+    )
 
 
 def _is_artifact_write(payload: dict[str, Any]) -> bool:

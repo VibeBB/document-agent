@@ -5,6 +5,11 @@
       "hooks": [
         {
           "type": "command",
+          "name": "require-records",
+          "command": "p=$(for c in \"${DOC_PLUGIN_ROOT:-}\" \"${OPENHANDS_PROJECT_DIR:-.}/plugins/doc\" \"${HOME:-}/.agents/plugins/doc\" \"${HOME:-}/.openhands/plugins/installed/doc\"; do [ -f \"$c/hooks/scripts/require_records.py\" ] && printf %s \"$c\" && break; done); [ -n \"$p\" ] || exit 0; exec python3 \"$p/hooks/scripts/require_records.py\" session-start"
+        },
+        {
+          "type": "command",
           "name": "doc-doctor",
           "command": "p=$(for c in \"${DOC_PLUGIN_ROOT:-}\" \"${OPENHANDS_PROJECT_DIR:-.}/plugins/doc\" \"${HOME:-}/.agents/plugins/doc\" \"${HOME:-}/.openhands/plugins/installed/doc\"; do [ -f \"$c/hooks/scripts/doc_doctor.py\" ] && printf %s \"$c\" && break; done); [ -n \"$p\" ] || exit 0; exec python3 \"$p/hooks/scripts/doc_doctor.py\""
         },
@@ -40,7 +45,7 @@
         {
           "type": "command",
           "name": "protect-lint-report",
-          "command": "p=$(for c in \"${DOC_PLUGIN_ROOT:-}\" \"${OPENHANDS_PROJECT_DIR:-.}/plugins/doc\" \"${HOME:-}/.openhands/plugins/installed/doc\"; do [ -f \"$c/hooks/scripts/protect_lint_report.py\" ] && printf %s \"$c\" && break; done); [ -n \"$p\" ] || { echo \"doc plugin root unresolved\" >&2; exit 2; }; exec python3 \"$p/hooks/scripts/protect_lint_report.py\""
+          "command": "p=$(for c in \"${DOC_PLUGIN_ROOT:-}\" \"${OPENHANDS_PROJECT_DIR:-.}/plugins/doc\" \"${HOME:-}/.agents/plugins/doc\" \"${HOME:-}/.openhands/plugins/installed/doc\"; do [ -f \"$c/hooks/scripts/protect_lint_report.py\" ] && printf %s \"$c\" && break; done); [ -n \"$p\" ] || { echo \"doc plugin root unresolved\" >&2; exit 2; }; exec python3 \"$p/hooks/scripts/protect_lint_report.py\""
         }
       ]
     },
@@ -59,6 +64,11 @@
     {
       "matcher": "*",
       "hooks": [
+        {
+          "type": "command",
+          "name": "require-records",
+          "command": "p=$(for c in \"${DOC_PLUGIN_ROOT:-}\" \"${OPENHANDS_PROJECT_DIR:-.}/plugins/doc\" \"${HOME:-}/.agents/plugins/doc\" \"${HOME:-}/.openhands/plugins/installed/doc\"; do [ -f \"$c/hooks/scripts/require_records.py\" ] && printf %s \"$c\" && break; done); [ -n \"$p\" ] || exit 0; exec python3 \"$p/hooks/scripts/require_records.py\" stop"
+        },
         {
           "type": "command",
           "name": "report-doc-status",

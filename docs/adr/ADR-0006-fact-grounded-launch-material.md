@@ -7,10 +7,10 @@
 
 VibeBB's making loop ends with putting the product in front of people: a
 product page, a press release, a demo video, and a plan for who hears which
-message where. No sibling owned this marketing / launch role, and it is where
+message where. No sister owned this marketing / launch role, and it is where
 language models are most tempted to invent: prices, dates, "world's first",
 awards, and comparisons. The doc plugin already owns a fact ledger
-(ADR-0002), sibling inquiry and user interview (ADR-0003), and a
+(ADR-0002), sister inquiry and user interview (ADR-0003), and a
 deterministic linter, so launch material belongs here.
 
 ## Decision

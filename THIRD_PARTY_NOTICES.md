@@ -22,7 +22,7 @@ Used to build and verify the project; not distributed.
 
 Hook and release helpers (`safety_rail.py`, `ensure_llm_profiles.py`,
 `scripts/bump_version.py`, `scripts/smoke_install_plugin.py`,
-`scripts/check_dependency_updates.py`) are adapted from sibling VibeBB
+`scripts/check_dependency_updates.py`) are adapted from sister VibeBB
 repositories released under the same BSD-3-Clause license by the same
 copyright holder.
 

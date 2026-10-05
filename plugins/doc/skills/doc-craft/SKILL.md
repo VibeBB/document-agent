@@ -111,7 +111,7 @@ flowchart LR
    APIs and CLIs with exact signatures and examples
 4. **Data and configuration** / データ・設定 — file formats, keys, defaults
 5. **Development** / 開発 — build, test, release commands exactly as the workspace runs them
-6. **Sources** / 出典 — which subsystem each sibling agent owns and where its artifacts live
+6. **Sources** / 出典 — which subsystem each sister agent owns and where its artifacts live
 
 ## Mermaid rules
 
@@ -131,3 +131,9 @@ flowchart LR
 - [ ] Troubleshooting rows are observable symptoms with concrete actions.
 - [ ] Alt text, table headers, no color-only meaning.
 - [ ] Open questions are listed for the user, not papered over.
+
+## Records
+
+Follow `doc-records/SKILL.md`: leave a hash-bound stage impression after each stage and record
+consequential documentation decisions. Inspect embedded figures and record a long-form vision
+review when the image is available; vision never changes the lint verdict.

@@ -9,15 +9,33 @@ tools:
   - glob
   - task_tracker
   - task_tool_set
+mcp_config:
+  doc:
+    command: sh
+    args:
+      - -c
+      - 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/scripts/doc_tool.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/scripts/doc_tool.py" mcp_server'
 max_iteration_per_run: 120
 max_budget_per_run: 6.0
 hooks:
+  session_start:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
+  stop:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" stop'
   pre_tool_use:
     - matcher: file_editor|apply_patch|terminal
       hooks:
         - type: command
           name: protect-lint-report
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
     - matcher: terminal
       hooks:
         - type: command
@@ -126,11 +144,21 @@ Return to the parent, in the conversation language: the documents written, the l
 the key messages, every open question and unanswered inquiry phrased as questions for the
 user, and the review findings you declined.
 
+## Records you must leave
+
+Append a hash-bound stage impression after the message plan, writing, and review stages. Record
+consequential audience, message, and claim choices with options, evidence, assumptions, unknowns,
+risks, and revisit conditions. Vision impressions are advisory, never a doc-lint verdict.
+
+Launch visuals. Inspect the product-page hero image and every launch figure
+with `doc_view_figure`. Use the `launch-visual` checklist: confirm the image
+supports the message, audience, and call to action without implying an
+unsupported feature, comparison, or availability claim. Record each vision
+review; visual observations are advisory and never change doc-lint's verdict.
+
 Images. User-attached screenshots and photos are materialized under
-`intake/attachments/` with a provenance `manifest.jsonl`. Before describing
-any image in a document — a user screenshot, a product photo, or a sibling
-render such as `out/<name>/*.png` — open it with `file_editor view` and
-describe only what it shows. A caption or step that depends on a picture
-you could not see is a question for the user, not a guess. Embed an image
-only when the file exists in the workspace, with alt text that states what
-it shows.
+`intake/attachments/` with a provenance `manifest.jsonl`. Inspect them and
+sister renders with `doc_view_figure` before describing them. A caption or
+step that depends on a picture you could not see is a question for the user,
+not a guess. Embed an image only when the file exists in the workspace, with
+alt text that states what it shows.

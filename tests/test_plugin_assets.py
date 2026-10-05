@@ -20,6 +20,7 @@ SKILL_NAMES = {
     "doc-inquiry",
     "doc-brief-rules",
     "doc-launch-craft",
+    "doc-records",
 }
 COMMAND_NAMES = {"write", "interview", "doctor", "launch"}
 
@@ -36,6 +37,57 @@ def _frontmatter(path: Path) -> dict[str, str]:
         if sep:
             fields[key.strip()] = value.strip()
     return fields
+
+
+def _frontmatter_mcp_config(path: Path) -> dict[str, dict[str, str | list[str]]]:
+    text = path.read_text(encoding="utf-8")
+    match = FRONTMATTER_RE.match(text)
+    assert match, f"{path} has no YAML frontmatter"
+
+    config: dict[str, dict[str, str | list[str]]] = {}
+    server: str | None = None
+    field: str | None = None
+    in_mcp_config = False
+    for line in match.group(1).splitlines():
+        if not in_mcp_config:
+            in_mcp_config = line == "mcp_config:"
+            continue
+        if not line or not line[0].isspace():
+            break
+        indent = len(line) - len(line.lstrip())
+        value = line.strip()
+        if indent == 2:
+            assert value.endswith(":")
+            server_name = value[:-1]
+            server = server_name
+            config[server_name] = {}
+            field = None
+        elif indent == 4:
+            assert server is not None
+            server_name = server
+            key, separator, raw_value = value.partition(":")
+            assert separator
+            if raw_value.strip():
+                config[server_name][key] = raw_value.strip()
+                field = None
+            else:
+                config[server_name][key] = []
+                field = key
+        elif indent == 6:
+            assert server is not None and field is not None
+            server_name = server
+            field_name = field
+            assert value.startswith("- ")
+            items = config[server_name][field_name]
+            assert isinstance(items, list)
+            item = value[2:].strip()
+            if item.startswith("'") and item.endswith("'"):
+                item = item[1:-1].replace("''", "'")
+            items.append(item)
+        else:
+            raise AssertionError(f"unexpected mcp_config indentation in {path}: {line}")
+    assert config, f"{path} has no mcp_config"
+    return config
 
 
 def test_plugin_json() -> None:
@@ -67,9 +119,11 @@ def test_review_agent_is_read_only() -> None:
     assert "  - file_editor\n" in head.group(1).split("hooks:")[0]
     normalized = " ".join(text.split())
     assert (
-        "Read-only: you run read commands (`cat`, `ls`, `git --no-pager diff`, "
-        "the linter with `--no-write`) and use `file_editor` only with `view`; nothing "
-        "else." in normalized
+        "Read-only for documents: you run read commands (`cat`, `ls`, "
+        "`git --no-pager diff`, the linter with `--no-write`) and use "
+        "`file_editor` only with `view`. You may call "
+        "`doc_view_figure` and write only `doc_record_vision_review` and "
+        "`doc_record_impression`." in normalized
     )
     assert _frontmatter(PLUGIN_ROOT / "agents" / "doc-review.md")["model"] == (
         "vibebb-review"
@@ -117,6 +171,23 @@ def test_write_command_contract_lines() -> None:
         assert expected in text, expected
 
 
+def test_sister_liaison_v2_guidance() -> None:
+    liaison = (PLUGIN_ROOT / "agents" / "doc-liaison.md").read_text(encoding="utf-8")
+    for expected in (
+        "At the start of each run",
+        "doc_ux_inbox",
+        "doc_ux_respond",
+        "do not claim completion for stale",
+        "deterministic doc linter already passed",
+    ):
+        assert expected in liaison, expected
+    for command in ("write", "launch"):
+        text = (PLUGIN_ROOT / "commands" / f"{command}.md").read_text(encoding="utf-8")
+        assert "doc_ux_inbox" in text
+    doctor = (PLUGIN_ROOT / "commands" / "doctor.md").read_text(encoding="utf-8")
+    assert "liaison inbox counts" in doctor
+
+
 def test_interview_command_ends_turn_and_records_verbatim() -> None:
     text = (PLUGIN_ROOT / "commands" / "interview.md").read_text(encoding="utf-8")
     for expected in ("without a tool call", "verbatim", "interview.md", "skip"):
@@ -132,24 +203,59 @@ def test_agents_name_their_stage_files() -> None:
         assert expected in liaison, expected
 
 
-def test_inquiry_skill_covers_every_sibling() -> None:
+def test_inquiry_skill_covers_every_sister() -> None:
     text = (PLUGIN_ROOT / "skills" / "doc-inquiry" / "SKILL.md").read_text(
         encoding="utf-8"
     )
-    for sibling in ("wire", "mech", "circuit", "ux", "bard", "user"):
-        assert f"| {sibling} |" in text, sibling
+    for sister in (
+        "bard",
+        "circuit",
+        "dashboard",
+        "firmware",
+        "fpga",
+        "mech",
+        "prodeng",
+        "sim",
+        "ux",
+        "wire",
+        "user",
+    ):
+        assert f"| {sister} |" in text, sister
 
 
 def test_hooks_json_matches_agent_frontmatter() -> None:
     hooks = json.loads((PLUGIN_ROOT / "hooks" / "hooks.json").read_text("utf-8"))
     pre = {h["name"]: h["command"] for g in hooks["pre_tool_use"] for h in g["hooks"]}
     post = {h["name"]: h["command"] for g in hooks["post_tool_use"] for h in g["hooks"]}
+    require_start = next(
+        h["command"]
+        for group in hooks["session_start"]
+        for h in group["hooks"]
+        if h["name"] == "require-records"
+    )
+    require_stop = next(
+        h["command"]
+        for group in hooks["stop"]
+        for h in group["hooks"]
+        if h["name"] == "require-records"
+    )
     for path in PLUGIN_ROOT.glob("agents/*.md"):
         text = path.read_text(encoding="utf-8")
         for command in (*pre.values(), *post.values()):
             assert f"command: '{command}'" in text, path.name
+        assert f"command: '{require_start}'" in text, path.name
+        assert f"command: '{require_stop}'" in text, path.name
     review = (PLUGIN_ROOT / "agents" / "doc-review.md").read_text(encoding="utf-8")
     assert "  - file_editor\n" in review
+
+
+def test_mcp_server_config_is_shared_by_every_agent() -> None:
+    config = json.loads((PLUGIN_ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    servers = config["mcpServers"]
+    assert set(servers) == {"doc"}
+    for path in PLUGIN_ROOT.glob("agents/*.md"):
+        assert _frontmatter_mcp_config(path) == {"doc": servers["doc"]}, path.name
+    assert servers["doc"]["args"][-1].endswith('doc_tool.py" mcp_server')
 
 
 def _markdown_files() -> list[Path]:

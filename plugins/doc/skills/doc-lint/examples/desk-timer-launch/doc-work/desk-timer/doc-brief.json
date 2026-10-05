@@ -20,11 +20,11 @@
   ],
   "sources": [
     {"id": "S1", "kind": "file", "ref": "firmware/src/main.c"},
-    {"id": "S2", "kind": "sibling_artifact", "ref": "circuit/tomo.brief.json", "agent": "circuit"},
-    {"id": "S3", "kind": "sibling_agent", "ref": "doc-work/desk-timer/inquiries.md#Q1", "agent": "mech"},
+    {"id": "S2", "kind": "sister_artifact", "ref": "circuit/tomo.brief.json", "agent": "circuit", "sha256": "5c8185ab18cfc1bb559d03a539539cecddbf6af335e130c2c2700348d4aae68f"},
+    {"id": "S3", "kind": "sister_agent", "ref": "doc-work/desk-timer/inquiries.md#Q1", "agent": "mech"},
     {"id": "S4", "kind": "user_interview", "ref": "doc-work/desk-timer/interview.md#A1"},
     {"id": "S5", "kind": "user_interview", "ref": "doc-work/desk-timer/interview.md#A2"},
-    {"id": "S6", "kind": "sibling_artifact", "ref": "cues/tomo-timer/cues.json", "agent": "bard"}
+    {"id": "S6", "kind": "sister_artifact", "ref": "cues/tomo-timer/cues.json", "agent": "bard", "sha256": "02a0b24aec76c8d9ecac12d06ef3fae3ca0e9837486eff352b71054d9d1d65d0"}
   ],
   "facts": [
     {"id": "F1", "text": "The knob sets 1 to 90 minutes in 1-minute steps.", "sources": ["S1"]},

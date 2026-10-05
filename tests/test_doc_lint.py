@@ -1,6 +1,7 @@
 """Tests for skills/doc-lint/scripts/doc_lint.py (brief contract + document lint)."""
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -18,6 +19,12 @@ def _brief(root: Path) -> dict[str, object]:
 
 def _save(root: Path, brief: dict[str, object]) -> None:
     (root / BRIEF_REL).write_text(json.dumps(brief), encoding="utf-8")
+
+
+def _append_source(brief: dict[str, object], source: dict[str, object]) -> None:
+    sources = brief["sources"]
+    assert isinstance(sources, list)
+    sources.append(source)
 
 
 def _run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -69,6 +76,106 @@ def test_brief_only_writes_nothing(workspace: Path) -> None:
     result = _run(workspace, "--brief-only")
     assert result.returncode == 0
     assert not (workspace / BRIEF_REL.with_name("doc-lint.json")).exists()
+
+
+def test_file_source_hash_is_optional_and_checked_in_brief_only(
+    doc_lint: ModuleType, workspace: Path
+) -> None:
+    brief = _brief(workspace)
+    sources = brief["sources"]
+    assert isinstance(sources, list)
+    firmware = workspace / "firmware/src/main.c"
+    source = sources[0]
+    assert isinstance(source, dict)
+    source["sha256"] = hashlib.sha256(firmware.read_bytes()).hexdigest()
+    _save(workspace, brief)
+    assert _problems(doc_lint, workspace) == []
+
+    firmware.write_text("changed source\n", encoding="utf-8")
+    result = _run(workspace, "--brief-only")
+    assert result.returncode == 1
+    assert "source S1 changed since the brief was written" in result.stdout
+
+
+def test_sister_artifact_tree_hash_is_checked_in_brief_only(
+    doc_lint: ModuleType, workspace: Path
+) -> None:
+    artifact = workspace / "dashboard/artifacts"
+    artifact.mkdir(parents=True)
+    (artifact / "panel.json").write_text('{"view":"timer"}\n', encoding="utf-8")
+    digest = doc_lint._records.tree_sha256(artifact)
+    brief = _brief(workspace)
+    _append_source(
+        brief,
+        {
+            "id": "S6",
+            "kind": "sister_artifact",
+            "ref": "dashboard/artifacts",
+            "agent": "dashboard",
+            "sha256": digest,
+        },
+    )
+    _save(workspace, brief)
+    assert _problems(doc_lint, workspace) == []
+
+    (artifact / "panel.json").write_text('{"view":"clock"}\n', encoding="utf-8")
+    result = _run(workspace, "--brief-only")
+    assert result.returncode == 1
+    assert "source S6 changed since the brief was written" in result.stdout
+
+
+def test_sister_record_event_must_match_agent(
+    doc_lint: ModuleType, workspace: Path
+) -> None:
+    log = workspace / "observations/circuit/decisions.jsonl"
+    record = json.loads(log.read_text(encoding="utf-8"))
+    record["plugin"] = "mech"
+    log.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    problems = _problems(doc_lint, workspace)
+    assert any(
+        "source S5 event" in problem and "plugin does not match circuit" in problem
+        for problem in problems
+    ), problems
+
+
+def test_missing_sister_record_event_is_rejected(
+    doc_lint: ModuleType, workspace: Path
+) -> None:
+    brief = _brief(workspace)
+    sources = brief["sources"]
+    assert isinstance(sources, list)
+    source = sources[4]
+    assert isinstance(source, dict)
+    source["event_id"] = "b" * 64
+    _save(workspace, brief)
+    problems = _problems(doc_lint, workspace)
+    assert any(
+        "source S5 event" in problem and "not found" in problem for problem in problems
+    ), problems
+
+
+def test_sister_record_requires_a_rationale_section(
+    doc_lint: ModuleType, workspace: Path
+) -> None:
+    _edit(
+        workspace,
+        "docs/technical-reference.md",
+        "## Rationale",
+        "## Design notes",
+    )
+    problems = _problems(doc_lint, workspace)
+    assert any(
+        "technical_reference: no design-rationale section" in problem
+        for problem in problems
+    ), problems
+
+
+@pytest.mark.parametrize("heading", ["## Rationale", "## 設計根拠", "### 設計判断"])
+def test_sister_record_rationale_aliases_are_accepted(
+    doc_lint: ModuleType, workspace: Path, heading: str
+) -> None:
+    _edit(workspace, "docs/technical-reference.md", "## Rationale", heading)
+    assert _problems(doc_lint, workspace) == []
 
 
 def test_failing_lint_still_writes_report(workspace: Path) -> None:
@@ -164,9 +271,33 @@ def _pop_item(key: str, index: int, field: str):
         (_set_product("vision_source", "S1"), "must reference a user_interview"),
         (_set("sources", []), "sources: must be a non-empty list"),
         (_set_item("sources", 0, "kind", "rumor"), "sources[0].kind"),
+        (
+            _set_item("sources", 0, "kind", "sibling_agent"),
+            "sources[0].kind",
+        ),
+        (
+            _set_item("sources", 0, "kind", "sibling_artifact"),
+            "sources[0].kind",
+        ),
         (_set_item("sources", 1, "id", "S1"), "sources[1].id: duplicate S1"),
         (_pop_item("sources", 1, "agent"), "sources[1].agent: must be one of"),
-        (_set_item("sources", 0, "agent", "wire"), "only allowed for sibling"),
+        (_set_item("sources", 0, "agent", "wire"), "only allowed for sister"),
+        (
+            _pop_item("sources", 1, "sha256"),
+            "sha256: required for sister_artifact sources",
+        ),
+        (
+            _set_item("sources", 1, "sha256", "not-a-hash"),
+            "must be a lowercase hex sha256",
+        ),
+        (
+            _set_item("sources", 4, "event_id", "not-a-hash"),
+            "event_id: must be a lowercase hex sha256",
+        ),
+        (
+            _set_item("sources", 4, "ref", "observations/circuit/other.jsonl"),
+            "ref: must identify a record log",
+        ),
         (_set("facts", []), "facts: must be a non-empty list"),
         (_set_item("facts", 0, "sources", []), "every fact needs at least one"),
         (_set_item("facts", 0, "sources", ["S9"]), "unknown source 'S9'"),
@@ -183,7 +314,7 @@ def _pop_item(key: str, index: int, field: str):
         (_pop_item("inquiries", 0, "answer"), "answer: required when"),
         (
             _set_item("inquiries", 0, "source", "S2"),
-            "must be a sibling source from mech",
+            "must be a sister source from mech",
         ),
         (_set_item("inquiries", 1, "source", "S3"), "user answers need user_interview"),
         (_set_item("inquiries", 2, "answer", "x"), "only allowed when answered"),
@@ -387,6 +518,12 @@ JA_MANUAL = """# Tomo Timer 取扱説明書
 def test_japanese_headings_pass(doc_lint: ModuleType, workspace: Path) -> None:
     brief = _brief(workspace)
     brief["language"] = "ja"
+    sources = brief["sources"]
+    facts = brief["facts"]
+    assert isinstance(sources, list)
+    assert isinstance(facts, list)
+    brief["sources"] = sources[:4]
+    brief["facts"] = facts[:4]
     brief["targets"] = [
         {"kind": "readme", "path": "README.ja.md"},
         {"kind": "user_manual", "path": "docs/manual.ja.md"},

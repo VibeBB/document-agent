@@ -89,15 +89,37 @@ def main() -> int:
         briefs = sorted(work.glob(f"*/{BRIEF_NAME}")) if work.is_dir() else []
         lines: list[str] = []
         todo: list[str] = []
+        has_questions = False
         for brief_path in briefs:
             brief = _read_object(brief_path)
             state = lint_state(brief_path, root)
             unanswered, open_q = pending_questions(brief)
+            has_questions = has_questions or unanswered > 0 or open_q > 0
             rel = brief_path.relative_to(root).as_posix()
             lines.append(
                 f"{rel}: linted={state} unanswered_inquiries={unanswered}"
                 f" open_questions={open_q}"
             )
+            try:
+                scripts = Path(__file__).resolve().parents[2] / "scripts"
+                if str(scripts) not in sys.path:
+                    sys.path.insert(0, str(scripts))
+                from doc_figures import figures  # type: ignore[reportMissingImports]
+
+                inventory = figures(brief_path, root)
+                pending = [
+                    item["path"]
+                    for item in inventory["figures"]
+                    if not item["reviewed"]
+                ]
+                suffix = (
+                    f" ({', '.join(str(path) for path in pending)})" if pending else ""
+                )
+                lines.append(
+                    f"{rel}: figures not vision-reviewed: {len(pending)}{suffix}"
+                )
+            except Exception as exc:  # noqa: BLE001 - figure status is advisory
+                lines.append(f"{rel}: figure inventory unavailable: {exc}")
             if state != "pass":
                 todo.append(rel)
         if todo:
@@ -105,7 +127,7 @@ def main() -> int:
                 "Before finishing, rerun doc_lint.py (or state the failing verdict"
                 " explicitly) for: " + ", ".join(todo)
             )
-        if any("unanswered_inquiries=0 open_questions=0" not in ln for ln in lines):
+        if has_questions:
             lines.append(
                 "List unanswered inquiries and open questions in the final"
                 " report so the user can answer them."

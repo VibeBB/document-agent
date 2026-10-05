@@ -1,5 +1,5 @@
 ---
-description: Write product documentation for this workspace — a user-friendly README with a diagram and quick start, a user manual, and a technical reference — asking sibling agents and the user for anything unknown.
+description: Write product documentation for this workspace — a user-friendly README with a diagram and quick start, a user manual, and a technical reference — asking sister agents and the user for anything unknown.
 argument-hint: "[all|readme|manual|tech] [one-line subject]"
 allowed-tools:
   - terminal
@@ -47,11 +47,16 @@ Documentation takes many minutes, so make the plan visible before starting.
    ```text
    task(subagent_type="doc-liaison",
         description="Gather documentation facts",
-        prompt="Work directory: doc-work/<slug>/. Targets: <kind=path, ...>. Read context.md first, then survey the workspace and ask sibling agents. Write survey.md and inquiries.md.")
+        prompt="Work directory: doc-work/<slug>/. Targets: <kind=path, ...>. Read context.md first, then survey the workspace and ask sister agents. Write survey.md and inquiries.md.")
    ```
 
    Without `task`: read `<doc plugin root>/agents/doc-liaison.md` and run
    its stages yourself, writing the same files.
+   Also check `doc_ux_inbox` or `python3 <doc plugin root>/scripts/doc_tool.py ux inbox`
+   for sister requests addressed to doc. Treat these as inbound work,
+   separate from questions doc asks other sisters; answer them through
+   `doc_ux_respond` / `doc_tool.py ux respond` and do not claim `done` until its
+   deterministic gates pass.
 5. **Interview (when needed).** If `inquiries.md` has `to: user` questions
    still `unanswered` and `doc-work/<slug>/interview.md` does not already
    answer them, run the `/doc:interview` procedure now: ask the questions
@@ -94,4 +99,8 @@ Documentation takes many minutes, so make the plan visible before starting.
       them.
    6. The last line must be exactly `Path: task sub-agent` or
       `Path: fallback (no task)` (the fallback may append ` — <reason>`),
-      matching step 2.
+   matching step 2.
+
+At every completed stage, append the records required by
+`<doc plugin root>/skills/doc-records/SKILL.md`; vision observations are advisory and do not
+change the doc-lint result.

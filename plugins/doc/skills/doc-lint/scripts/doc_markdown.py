@@ -47,6 +47,7 @@ __all__ = [
     "PLACEHOLDER_RE",
     "ParsedDoc",
     "QUICKSTART_ALIASES",
+    "RATIONALE_ALIASES",
     "SUPERLATIVE_RE",
     "TABLE_SEPARATOR_RE",
     "TASK_ITEM_RE",
@@ -146,6 +147,8 @@ DEV_ALIASES = (
     "ビルド",
     "テスト",
 )
+
+RATIONALE_ALIASES = ("rationale", "設計根拠", "設計判断")
 
 FEATURE_ALIASES = (
     "feature",

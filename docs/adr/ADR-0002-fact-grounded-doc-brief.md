@@ -15,7 +15,8 @@ voltage or dimension in a user manual is a defect.
    `doc-work/<slug>/doc-brief.json` (schema 0.1,
    [contract](../doc-brief-contract.md)). Each fact cites at least one
    source (`file`, `git_log`, `conversation`, `user_interview`,
-   `sibling_agent`, `sibling_artifact`).
+   `sister_agent`, `sister_artifact`, or `sister_record`). Sister artifact
+   hashes and record event IDs are verified against current workspace content.
 2. `product.vision` (the maker's intent) is allowed only with a
    `vision_source` of kind `user_interview`.
 3. Unknowns go to `open_questions` and are reported to the user; documents
@@ -32,4 +33,7 @@ voltage or dimension in a user manual is a defect.
 
 - Documents may be shorter than a model would write unprompted; gaps are
   visible as open questions instead of hidden as guesses.
-- The contract is versioned; new keys or kinds need a schema bump.
+- A sourced sister design decision requires a rationale section in the
+  technical reference, and the artifact hash or record event binds the fact
+  to current evidence.
+- Retired source-kind names are not accepted.

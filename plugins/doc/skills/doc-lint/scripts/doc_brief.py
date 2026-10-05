@@ -24,7 +24,8 @@ __all__ = [
     "PRODUCT_DOC_KINDS",
     "PRODUCT_KEYS",
     "SCHEMA_VERSION",
-    "SIBLINGS",
+    "SISTERS",
+    "SISTER_RECORD_FILES",
     "SOURCE_KINDS",
     "TARGET_KINDS",
     "TOP_KEYS",
@@ -69,7 +70,28 @@ PLANNED_KINDS = frozenset(
     {"quality_plan", "test_report", "risk_assessment", "inspection_record"}
 )
 
-SIBLINGS = ("wire", "mech", "circuit", "ux", "bard")
+SISTERS = (
+    "bard",
+    "circuit",
+    "dashboard",
+    "firmware",
+    "fpga",
+    "mech",
+    "prodeng",
+    "sim",
+    "ux",
+    "wire",
+)
+
+SISTER_SOURCE_KINDS = frozenset({"sister_agent", "sister_artifact", "sister_record"})
+
+SISTER_RECORD_FILES = {
+    "decisions.jsonl",
+    "impressions.jsonl",
+    "vision-reviews.jsonl",
+}
+
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 SOURCE_KINDS = frozenset(
     {
@@ -77,8 +99,9 @@ SOURCE_KINDS = frozenset(
         "git_log",
         "conversation",
         "user_interview",
-        "sibling_agent",
-        "sibling_artifact",
+        "sister_agent",
+        "sister_artifact",
+        "sister_record",
     }
 )
 
@@ -148,7 +171,7 @@ def _as_list(value: object) -> list[object] | None:
 
 
 def _safe_rel_path(value: str) -> bool:
-    if not value or "\\" in value or value.startswith("/"):
+    if not value or "\x00" in value or "\\" in value or value.startswith("/"):
         return False
     parts = PurePosixPath(value).parts
     return ".." not in parts and not re.match(r"^[A-Za-z]:", value)
@@ -209,13 +232,43 @@ def validate_brief(brief: object) -> tuple[list[str], list[Target]]:
         if not _is_str(src.get("ref"), 1, 400):
             problems.append(f"{label}.ref: must be a non-empty string")
         agent = src.get("agent")
-        if kind in ("sibling_agent", "sibling_artifact"):
-            if agent not in SIBLINGS:
-                problems.append(f"{label}.agent: must be one of {list(SIBLINGS)}")
-            else:
+        allowed_keys = {"id", "kind", "ref"}
+        if kind in SISTER_SOURCE_KINDS:
+            allowed_keys.add("agent")
+        if kind in {"file", "sister_artifact"}:
+            allowed_keys.add("sha256")
+        if kind == "sister_record":
+            allowed_keys.add("event_id")
+        for key in sorted(set(src) - allowed_keys):
+            problems.append(f"{label}.{key}: unknown key")
+        if kind in SISTER_SOURCE_KINDS:
+            if agent not in SISTERS:
+                problems.append(f"{label}.agent: must be one of {list(SISTERS)}")
+            elif kind in {"sister_agent", "sister_artifact"}:
                 source_agents[sid] = cast(str, agent)
         elif agent is not None:
-            problems.append(f"{label}.agent: only allowed for sibling sources")
+            problems.append(f"{label}.agent: only allowed for sister sources")
+        if kind == "sister_artifact" and "sha256" not in src:
+            problems.append(f"{label}.sha256: required for sister_artifact sources")
+        if kind in {"file", "sister_artifact"} and "sha256" in src:
+            if not isinstance(src["sha256"], str) or not SHA256_RE.fullmatch(
+                src["sha256"]
+            ):
+                problems.append(f"{label}.sha256: must be a lowercase hex sha256")
+        if kind == "sister_record":
+            event_id = src.get("event_id")
+            if not isinstance(event_id, str) or not SHA256_RE.fullmatch(event_id):
+                problems.append(f"{label}.event_id: must be a lowercase hex sha256")
+            if (
+                isinstance(agent, str)
+                and isinstance(src.get("ref"), str)
+                and src.get("ref")
+                not in {f"observations/{agent}/{name}" for name in SISTER_RECORD_FILES}
+            ):
+                problems.append(
+                    f"{label}.ref: must identify a record log under"
+                    f" observations/{agent}/"
+                )
         sources[sid] = kind
 
     product = _as_dict(top.get("product"))
@@ -293,6 +346,10 @@ def validate_brief(brief: object) -> tuple[list[str], list[Target]]:
         seen_kinds.add(kind)
         seen_paths.add(path)
         targets.append(Target(kind, path))
+    if any(kind == "sister_record" for kind in sources.values()) and not any(
+        target.kind == "technical_reference" for target in targets
+    ):
+        problems.append("targets: sister_record sources require a technical_reference")
 
     raw_facts = _as_list(top.get("facts"))
     if raw_facts is None or not raw_facts:
@@ -341,8 +398,8 @@ def validate_brief(brief: object) -> tuple[list[str], list[Target]]:
         else:
             inquiry_ids.add(qid)
         to = inq.get("to")
-        if to not in (*SIBLINGS, "user"):
-            problems.append(f'{label}.to: must be a sibling name or "user"')
+        if to not in (*SISTERS, "user"):
+            problems.append(f'{label}.to: must be a sister name or "user"')
             continue
         if not _is_str(inq.get("question"), 1, 800):
             problems.append(f"{label}.question: must be a non-empty string")
@@ -364,7 +421,7 @@ def validate_brief(brief: object) -> tuple[list[str], list[Target]]:
         if to == "user" and sources[src] != "user_interview":
             problems.append(f"{label}.source: user answers need user_interview")
         if to != "user" and source_agents.get(src) != to:
-            problems.append(f"{label}.source: must be a sibling source from {to}")
+            problems.append(f"{label}.source: must be a sister source from {to}")
 
     if "open_questions" in top:
         _check_str_list(top.get("open_questions"), "open_questions", 0, 50, problems)
