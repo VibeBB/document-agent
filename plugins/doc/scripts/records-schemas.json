@@ -1,0 +1,310 @@
+{
+  "decision": {
+    "$defs": {
+      "DecisionOption": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "pros": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Pros",
+            "type": "array"
+          },
+          "cons": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Cons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "pros",
+          "cons"
+        ],
+        "title": "DecisionOption",
+        "type": "object"
+      },
+      "EvidenceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Path"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reference"
+          }
+        },
+        "title": "EvidenceInput",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "What the agent supplies; evidence paths are hashed by the writer.",
+    "properties": {
+      "id": {
+        "description": "Stable decision id, e.g. 'wire-gauge-power'",
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "title": "Id",
+        "type": "string"
+      },
+      "stage": {
+        "description": "Stage the decision belongs to",
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "title": "Stage",
+        "type": "string"
+      },
+      "question": {
+        "minLength": 10,
+        "title": "Question",
+        "type": "string"
+      },
+      "principles": {
+        "description": "First principles, physical laws or standards the choice rests on",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1,
+        "title": "Principles",
+        "type": "array"
+      },
+      "options": {
+        "items": {
+          "$ref": "#/$defs/DecisionOption"
+        },
+        "minItems": 2,
+        "title": "Options",
+        "type": "array"
+      },
+      "chosen": {
+        "minLength": 1,
+        "title": "Chosen",
+        "type": "string"
+      },
+      "rationale": {
+        "minLength": 200,
+        "title": "Rationale",
+        "type": "string"
+      },
+      "assumptions": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Assumptions",
+        "type": "array"
+      },
+      "unknowns": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Unknowns",
+        "type": "array"
+      },
+      "risks": {
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1,
+        "title": "Risks",
+        "type": "array"
+      },
+      "revisit_when": {
+        "minLength": 1,
+        "title": "Revisit When",
+        "type": "string"
+      },
+      "decided_by": {
+        "default": "agent",
+        "enum": [
+          "agent",
+          "user"
+        ],
+        "title": "Decided By",
+        "type": "string"
+      },
+      "evidence": {
+        "items": {
+          "$ref": "#/$defs/EvidenceInput"
+        },
+        "minItems": 1,
+        "title": "Evidence",
+        "type": "array"
+      }
+    },
+    "required": [
+      "id",
+      "stage",
+      "question",
+      "principles",
+      "options",
+      "chosen",
+      "rationale",
+      "risks",
+      "revisit_when",
+      "evidence"
+    ],
+    "title": "DecisionInput",
+    "type": "object"
+  },
+  "impression": {
+    "additionalProperties": false,
+    "properties": {
+      "stage": {
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "title": "Stage",
+        "type": "string"
+      },
+      "artifacts": {
+        "description": "Workspace-relative files or directories the stage produced",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1,
+        "title": "Artifacts",
+        "type": "array"
+      },
+      "impression": {
+        "title": "Impression",
+        "type": "string"
+      }
+    },
+    "required": [
+      "stage",
+      "artifacts",
+      "impression"
+    ],
+    "title": "StageImpressionInput",
+    "type": "object"
+  },
+  "vision_review": {
+    "$defs": {
+      "VisionFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "note": {
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "severity",
+          "note"
+        ],
+        "title": "VisionFinding",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "image_path": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Workspace-relative image",
+        "title": "Image Path"
+      },
+      "source_event_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "event_id of the vision tool event or image observation",
+        "title": "Source Event Id"
+      },
+      "model": {
+        "minLength": 1,
+        "title": "Model",
+        "type": "string"
+      },
+      "checklist": {
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "title": "Checklist",
+        "type": "string"
+      },
+      "findings": {
+        "items": {
+          "$ref": "#/$defs/VisionFinding"
+        },
+        "title": "Findings",
+        "type": "array"
+      },
+      "impression": {
+        "title": "Impression",
+        "type": "string"
+      }
+    },
+    "required": [
+      "model",
+      "checklist",
+      "impression"
+    ],
+    "title": "VisionReviewInput",
+    "type": "object",
+    "anyOf": [
+      {
+        "required": [
+          "image_path"
+        ]
+      },
+      {
+        "required": [
+          "source_event_id"
+        ]
+      }
+    ]
+  }
+}

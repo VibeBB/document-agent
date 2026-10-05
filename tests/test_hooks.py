@@ -1,5 +1,6 @@
 """Tests for the doc plugin hook scripts."""
 
+import importlib.util
 import json
 import os
 import shutil
@@ -15,6 +16,7 @@ DOCTOR_SCRIPT = SCRIPTS / "doc_doctor.py"
 PROTECT_SCRIPT = SCRIPTS / "protect_lint_report.py"
 SAFETY_RAIL_SCRIPT = SCRIPTS / "safety_rail.py"
 ENSURE_PROFILES_SCRIPT = SCRIPTS / "ensure_llm_profiles.py"
+REQUIRE_RECORDS_SCRIPT = SCRIPTS / "require_records.py"
 
 
 def _run(
@@ -49,6 +51,76 @@ def _lint(root: Path) -> None:
 
 def test_status_without_doc_work(tmp_path: Path) -> None:
     assert "No doc briefs" in _status(tmp_path)
+
+
+def test_require_records_session_marker_and_stop_status(tmp_path: Path) -> None:
+    policy = PLUGIN_ROOT / "hooks" / "records-policy.json"
+    env = {**os.environ, "OPENHANDS_PROJECT_DIR": str(tmp_path)}
+    start = subprocess.run(
+        [sys.executable, str(REQUIRE_RECORDS_SCRIPT), "session-start"],
+        input=json.dumps({"session_id": "test-session", "working_dir": str(tmp_path)}),
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+    assert start.returncode == 0, start.stderr
+    marker = tmp_path / "observations/doc/.sessions/test-session.json"
+    assert marker.is_file()
+    stop = subprocess.run(
+        [sys.executable, str(REQUIRE_RECORDS_SCRIPT), "stop"],
+        input=json.dumps({"session_id": "test-session", "working_dir": str(tmp_path)}),
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+    assert stop.returncode == 0, stop.stderr
+    status = json.loads(
+        (tmp_path / "observations/doc/records-status.json").read_text("utf-8")
+    )
+    assert status["verdict"] == "pass"
+    assert policy.is_file()
+
+
+def test_require_records_denial_is_bounded(tmp_path: Path) -> None:
+    env = {**os.environ, "OPENHANDS_PROJECT_DIR": str(tmp_path)}
+    start = subprocess.run(
+        [sys.executable, str(REQUIRE_RECORDS_SCRIPT), "session-start"],
+        input=json.dumps({"session_id": "bounded", "working_dir": str(tmp_path)}),
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+    assert start.returncode == 0
+    artifact = tmp_path / "doc-work/example/README.md"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text("# Changed output\n", encoding="utf-8")
+    command = [sys.executable, str(REQUIRE_RECORDS_SCRIPT), "stop"]
+    payload = json.dumps({"session_id": "bounded", "working_dir": str(tmp_path)})
+    for _ in range(2):
+        denied = subprocess.run(
+            command, input=payload, text=True, capture_output=True, env=env, check=False
+        )
+        assert denied.returncode != 0
+    allowed = subprocess.run(
+        command, input=payload, text=True, capture_output=True, env=env, check=False
+    )
+    assert allowed.returncode == 0
+    status = json.loads(
+        (tmp_path / "observations/doc/records-status.json").read_text("utf-8")
+    )
+    assert status["verdict"] == "fail"
+
+
+def test_protected_record_status_and_session_paths() -> None:
+    spec = importlib.util.spec_from_file_location("protect_lint_report", PROTECT_SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module._is_protected("observations/doc/records-status.json")
+    assert module._is_protected("observations/doc/.sessions/session.json")
 
 
 def test_status_unlinted_then_pass_then_stale(workspace: Path) -> None:

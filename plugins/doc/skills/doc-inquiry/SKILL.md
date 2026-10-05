@@ -83,3 +83,7 @@ questions whose answers change the README the most.
 
 The answers are quoted, not polished: the writer may shorten them for the README but never
 changes their meaning, and statements of intent appear only when the user made them.
+
+At the end of the survey and inquiry stages, record an impression bound to the stage files.
+Record meaningful choices about evidence ownership, conflicts, and unanswered questions using
+the document-records skill; do not treat a record as a fact source unless the brief cites it.

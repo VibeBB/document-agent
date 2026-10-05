@@ -9,9 +9,27 @@ tools:
   - glob
   - task_tracker
   - task_tool_set
+mcp_config:
+  doc:
+    command: sh
+    args:
+      - -c
+      - 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/scripts/doc_tool.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/scripts/doc_tool.py" mcp_server'
 max_iteration_per_run: 120
 max_budget_per_run: 6.0
 hooks:
+  session_start:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
+  stop:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" stop'
   pre_tool_use:
     - matcher: file_editor|apply_patch|terminal
       hooks:
@@ -125,6 +143,12 @@ findings verbatim into `launch-review.md` with a `## Decisions` section (`applie
 Return to the parent, in the conversation language: the documents written, the lint verdict,
 the key messages, every open question and unanswered inquiry phrased as questions for the
 user, and the review findings you declined.
+
+## Records you must leave
+
+Append a hash-bound stage impression after the message plan, writing, and review stages. Record
+consequential audience, message, and claim choices with options, evidence, assumptions, unknowns,
+risks, and revisit conditions. Vision impressions are advisory, never a doc-lint verdict.
 
 Images. User-attached screenshots and photos are materialized under
 `intake/attachments/` with a provenance `manifest.jsonl`. Before describing

@@ -131,3 +131,9 @@ flowchart LR
 - [ ] Troubleshooting rows are observable symptoms with concrete actions.
 - [ ] Alt text, table headers, no color-only meaning.
 - [ ] Open questions are listed for the user, not papered over.
+
+## Records
+
+Follow `doc-records/SKILL.md`: leave a hash-bound stage impression after each stage and record
+consequential documentation decisions. Inspect embedded figures and record a long-form vision
+review when the image is available; vision never changes the lint verdict.

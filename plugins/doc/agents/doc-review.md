@@ -7,9 +7,27 @@ tools:
   - file_editor
   - grep
   - glob
+mcp_config:
+  doc:
+    command: sh
+    args:
+      - -c
+      - 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/scripts/doc_tool.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/scripts/doc_tool.py" mcp_server'
 max_iteration_per_run: 30
 max_budget_per_run: 1.5
 hooks:
+  session_start:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
+  stop:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" stop'
   pre_tool_use:
     - matcher: file_editor|apply_patch|terminal
       hooks:
@@ -85,3 +103,8 @@ Return findings as a list, most important first. Each finding: `id` (R1, R2, …
 `where` (heading or line), `category` (one of clarity, first-impression, diagram, quick-start,
 completeness, accuracy, consistency, accessibility, jargon, message, audience, claim), `finding`, `suggestion`. At most
 fifteen findings. If the documents are good, say so and return fewer.
+
+After completing the review, append a stage impression bound to the reviewed artifacts and a
+vision review for each inspected figure. Findings remain advisory; do not edit the documents or
+change the deterministic doc-lint verdict. These records are the only writes permitted by this
+read-only role.

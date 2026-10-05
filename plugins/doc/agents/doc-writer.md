@@ -9,9 +9,27 @@ tools:
   - glob
   - task_tracker
   - task_tool_set
+mcp_config:
+  doc:
+    command: sh
+    args:
+      - -c
+      - 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/scripts/doc_tool.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/scripts/doc_tool.py" mcp_server'
 max_iteration_per_run: 120
 max_budget_per_run: 6.0
 hooks:
+  session_start:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
+  stop:
+    - matcher: "*"
+      hooks:
+        - type: command
+          name: require-records
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" stop'
   pre_tool_use:
     - matcher: file_editor|apply_patch|terminal
       hooks:
@@ -162,6 +180,13 @@ Return to the parent, in the conversation language:
 - every `open_questions` entry and every inquiry that is not `answered`, phrased as questions
   the parent can put to the user,
 - the review findings you declined, with reasons.
+
+## Records you must leave
+
+After each completed writing stage, append a hash-bound stage impression. Record decisions about
+fact interpretation, organization, and consequential wording, including options, evidence,
+unknowns, residual risks, and revisit conditions. Figure reviews describe accuracy, ambiguity,
+intent, usefulness, and next actions but never override doc-lint.
 
 Images. User-attached screenshots and photos are materialized under
 `intake/attachments/` with a provenance `manifest.jsonl`. Before describing

@@ -67,3 +67,7 @@ goes back to the user as open questions.
    question and unanswered inquiry, with an offer to run `/doc:interview`. The last line is
    exactly `Path: task sub-agent` or `Path: fallback (no task)` (the fallback may append
    ` — <reason>`).
+
+At every completed stage, append the records required by
+`<doc plugin root>/skills/doc-records/SKILL.md`; vision observations are advisory and do not
+change the doc-lint result.

@@ -93,3 +93,9 @@ two task items (`- [ ] ...`) **(checked)**; open questions that block the launch
 - [ ] The key messages read the same in every document that uses them.
 - [ ] The demo script shows the core experience, not a feature list.
 - [ ] Open questions are listed for the user, not papered over.
+
+## Records
+
+Follow `doc-records/SKILL.md`: record hash-bound impressions after the plan, writing, and review
+stages and decisions for consequential audience, message, or claim choices. Vision reviews are
+advisory and never alter the doc-lint verdict.

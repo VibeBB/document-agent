@@ -20,6 +20,7 @@ SKILL_NAMES = {
     "doc-inquiry",
     "doc-brief-rules",
     "doc-launch-craft",
+    "doc-records",
 }
 COMMAND_NAMES = {"write", "interview", "doctor", "launch"}
 
@@ -144,12 +145,34 @@ def test_hooks_json_matches_agent_frontmatter() -> None:
     hooks = json.loads((PLUGIN_ROOT / "hooks" / "hooks.json").read_text("utf-8"))
     pre = {h["name"]: h["command"] for g in hooks["pre_tool_use"] for h in g["hooks"]}
     post = {h["name"]: h["command"] for g in hooks["post_tool_use"] for h in g["hooks"]}
+    require_start = next(
+        h["command"]
+        for group in hooks["session_start"]
+        for h in group["hooks"]
+        if h["name"] == "require-records"
+    )
+    require_stop = next(
+        h["command"]
+        for group in hooks["stop"]
+        for h in group["hooks"]
+        if h["name"] == "require-records"
+    )
     for path in PLUGIN_ROOT.glob("agents/*.md"):
         text = path.read_text(encoding="utf-8")
         for command in (*pre.values(), *post.values()):
             assert f"command: '{command}'" in text, path.name
+        assert f"command: '{require_start}'" in text, path.name
+        assert f"command: '{require_stop}'" in text, path.name
     review = (PLUGIN_ROOT / "agents" / "doc-review.md").read_text(encoding="utf-8")
     assert "  - file_editor\n" in review
+
+
+def test_mcp_server_config_is_shared_by_every_agent() -> None:
+    config = json.loads((PLUGIN_ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    for path in PLUGIN_ROOT.glob("agents/*.md"):
+        text = path.read_text(encoding="utf-8")
+        assert "mcp_config:\n  doc:\n" in text, path.name
+    assert config["doc"]["args"][-1].endswith('doc_tool.py" mcp_server')
 
 
 def _markdown_files() -> list[Path]:

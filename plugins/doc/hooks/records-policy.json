@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "plugin": "doc",
+  "records_dir": "observations/doc",
+  "artifact_globs": [
+    "doc-work/*/*.json",
+    "doc-work/*/*.md",
+    "doc-work/*/figures/*",
+    "liaison/*.ux-response.json"
+  ],
+  "ignore_globs": ["examples/**", "tests/**", ".devin/**"],
+  "max_stop_denials": 2,
+  "record_hint": "Use python3 <doc plugin root>/scripts/doc_tool.py record {decision|impression|vision-review} --json FILE (or MCP doc_record_decision / doc_record_impression / doc_record_vision_review); see skills/doc-records/SKILL.md"
+}

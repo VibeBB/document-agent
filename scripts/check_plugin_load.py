@@ -22,16 +22,18 @@ EXPECTED_SKILLS = {
     "doc-inquiry",
     "doc-launch-craft",
     "doc-lint",
+    "doc-records",
 }
 EXPECTED_COMMANDS = {"doctor", "interview", "launch", "write"}
 EXPECTED_SESSION_START_HOOKS = {
     "doc-doctor",
     "ensure-llm-profiles",
     "intake-attachments",
+    "require-records",
 }
 EXPECTED_USER_PROMPT_SUBMIT_HOOKS = {"intake-attachments"}
 EXPECTED_PRE_TOOL_USE_HOOKS = {"protect-lint-report", "safety-rail"}
-EXPECTED_STOP_HOOKS = {"report-doc-status", "intake-attachments"}
+EXPECTED_STOP_HOOKS = {"report-doc-status", "intake-attachments", "require-records"}
 EXPECTED_POST_TOOL_USE_HOOKS = {"record-image-observation", "record-vision-tool-event"}
 
 

@@ -94,4 +94,8 @@ Documentation takes many minutes, so make the plan visible before starting.
       them.
    6. The last line must be exactly `Path: task sub-agent` or
       `Path: fallback (no task)` (the fallback may append ` — <reason>`),
-      matching step 2.
+   matching step 2.
+
+At every completed stage, append the records required by
+`<doc plugin root>/skills/doc-records/SKILL.md`; vision observations are advisory and do not
+change the doc-lint result.

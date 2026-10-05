@@ -23,7 +23,7 @@ required-version = "==0.12.23"
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "scripts", "tests"]
+src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plugins/doc/scripts", "scripts", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -31,7 +31,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
-include = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "scripts", "tests"]
+include = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plugins/doc/scripts", "scripts", "tests"]
 exclude = ["**/__pycache__", "**/.venv"]
 # The brief JSON boundary is intentionally untyped; strict Unknown-reporting
 # would only repeat what the validator already checks at runtime.
