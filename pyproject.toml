@@ -65,7 +65,7 @@ c1 = 79
 decision = 60
 c2 = 55
 mcdc = 36
-boundary = 36
+boundary = 43
 
 [tool.coverage.report]
-fail_under = 83
+fail_under = 84

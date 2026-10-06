@@ -99,3 +99,14 @@ find what they missed.
 - **Mutation testing**: a mutant (a flipped comparison, a removed condition)
   that survives the suite marks an assertion that is missing even though the
   line is covered. Mutation runs are advisory evidence, not a CI gate.
+
+## Reference suite
+
+`tests/test_doc_boundaries.py` applies these techniques to figure viewing
+(`plugins/doc/scripts/doc_figures.py`) and the README quick-start rule
+(`doc_lint.py`), following the family pattern set by wire-agent:
+
+- 3-value boundaries on the 5 MiB image limit, the 12-byte WebP signature,
+  and the 2..`MAX_QUICKSTART_STEPS` numbered quick-start steps;
+- equivalence classes per image MIME type: each extension accepts only its
+  own signature, and an empty file fails closed.
