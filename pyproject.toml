@@ -27,6 +27,15 @@ extend-exclude = ["plugins/doc/hooks/scripts/_records.py", "plugins/doc/hooks/sc
 target-version = "py312"
 src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plugins/doc/scripts", "scripts", "tests"]
 
+[tool.ruff.format]
+# Family-canonical files are byte-identical across repos (formatted at 88).
+exclude = [
+  "scripts/mutation_probe.py",
+  "scripts/structural_coverage.py",
+  "tests/test_mutation_probe.py",
+  "tests/test_structural_coverage.py",
+]
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
@@ -51,7 +60,23 @@ addopts = "-rs -n auto --dist loadgroup"
 
 [tool.coverage.run]
 source = ["plugins/doc"]
-branch = false
+branch = true
+
+[tool.vibebb-coverage]
+# Ratchet floors (percent) for scripts/structural_coverage.py, measured on
+# main minus one point for interpreter variance. Raise them, never lower.
+c0 = 85
+c1 = 79
+decision = 60
+c2 = 55
+mcdc = 36
+boundary = 43
+
+[tool.vibebb-mutation]
+# Advisory weekly mutation probe (scripts/mutation_probe.py); never a gate.
+targets = ["plugins/doc/skills/doc-lint/scripts/doc_lint.py", "plugins/doc/scripts/doc_figures.py"]
+tests = ["tests/test_doc_lint.py", "tests/test_doc_figures.py", "tests/test_doc_boundaries.py"]
+max_mutants = 400
 
 [tool.coverage.report]
-fail_under = 82
+fail_under = 84

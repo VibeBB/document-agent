@@ -120,7 +120,8 @@ uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py \
   --no-write
 ```
 
-Coverage must meet the `fail_under = 82` threshold in `pyproject.toml`.
+Coverage must meet the floors in `[tool.vibebb-coverage]` and `fail_under`
+in `pyproject.toml` ([test-coverage.md](test-coverage.md)).
 
 pytest selects subsets directly for a faster local check — `-k <expr>`, a
 test path, or `-n 0` to disable the default `-n auto` workers:

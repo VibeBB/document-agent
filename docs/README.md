@@ -33,6 +33,7 @@ decisions.
 | [Performance and limits](performance-and-limits.md) | Measured example lint times, file counts, size limits, and known constraints |
 | [Operations](operations.md) | Install, runtime, troubleshooting, release, and verification |
 | [Development](development.md) | Repository map, safe extension points, and contributor checks |
+| [Test coverage](test-coverage.md) | C0/C1/C2/MCC/MC/DC and boundary coverage, floors, test-design techniques |
 | [Improvement notes](improvement-notes.md) | Refactor findings and their implementation status |
 
 ## Repository policies
@@ -65,3 +66,4 @@ decisions.
 | [0006](adr/ADR-0006-fact-grounded-launch-material.md) | Bind launch claims and messaging to schema 0.2 facts |
 | [0007](adr/ADR-0007-vision-lane.md) | Inspect and record figures and user-attached images |
 | [0008](adr/ADR-0008-records-liaison-mcp.md) | Combine standard-library MCP tools, VRP, SLP v2, and hash-bound facts |
+| [0009](adr/ADR-0009-structural-coverage.md) | Structural coverage gate (C0, C1, C2, MC/DC, boundaries) |

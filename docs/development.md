@@ -48,7 +48,9 @@ copies because they follow wire's 100-character line length; their shared
 integrity is checked by `scripts/check_shared_hooks.py`, and Pyright still
 checks them.
 
-Coverage must stay at or above `fail_under = 82`. CI also runs the two
+CI runs pytest through `scripts/structural_coverage.py run`, which gates the
+C0, C1, decision, C2, MC/DC and boundary floors in `pyproject.toml`
+([test-coverage.md](test-coverage.md)). CI also runs the two
 shipped-example lint commands shown in [operations](operations.md#verification).
 The docs verifier checks local links and that accepted ADRs are indexed.
 
