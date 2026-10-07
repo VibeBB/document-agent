@@ -35,12 +35,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13", "3.14"]
-        include:
-          # Forward-compatibility canary ahead of the 2026-10-09 stable
-          # release: step-level continue-on-error keeps the leg green while
-          # the last step reports the failure as an annotation.
-          - python-version: "3.15"
-            experimental: true
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -52,14 +46,12 @@ jobs:
           persist-credentials: false
       - name: Cache uv-managed CPython
         id: cache-uv-managed-cpython
-        continue-on-error: ${{ matrix.experimental || false }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/uv-python
           key: uv-python-${{ runner.os }}-${{ matrix.python-version }}
       - name: Point uv Python installs at the cached path
         id: point-uv-python-installs-at-the-cached-path
-        continue-on-error: ${{ matrix.experimental || false }}
         # UV_PYTHON_INSTALL_DIR lands under _temp on the hosted image,
         # outside the uv dependency cache, so each leg re-downloaded CPython.
         run: echo "UV_PYTHON_INSTALL_DIR=$RUNNER_TEMP/uv-python" >> "$GITHUB_ENV"
@@ -71,14 +63,12 @@ jobs:
           cache-suffix: verify-${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         id: setup-uv
-        continue-on-error: ${{ matrix.experimental || false }}
         if: steps.setup-uv-1.outcome == 'failure'
         with:
           python-version: ${{ matrix.python-version }}
           cache-suffix: verify-${{ matrix.python-version }}
       - name: Sync dependencies
         id: sync-dependencies
-        continue-on-error: ${{ matrix.experimental || false }}
         # sdk-check installs openhands-sdk/tools so
         # tests/test_plugin_assets.py::test_sdk_plugin_load exercises the
         # real plugin load instead of skipping on importorskip.
@@ -86,7 +76,6 @@ jobs:
       - name: Ruff
         id: ruff
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         # pyproject pins both tools to py312 — one leg covers lint/type-check.
         if: matrix.python-version == '3.12'
         run: |
@@ -95,33 +84,27 @@ jobs:
       - name: Pyright
         id: pyright
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         if: matrix.python-version == '3.12'
         run: uv run pyright
       - name: Check shared hooks
         id: check-shared-hooks
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         run: uv run python scripts/check_shared_hooks.py
       - name: Check shared workflows
         id: check-shared-workflows
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         run: uv run python scripts/check_shared_workflows.py
       - name: Pytest
         id: pytest
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         run: uv run python scripts/structural_coverage.py run --json out/structural-coverage.json
       - name: Verify docs
         id: verify-docs
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         run: uv run python scripts/verify_docs.py
       - name: Lint shipped example
         id: lint-shipped-example
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         run: >
           uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py
           --root plugins/doc/skills/doc-lint/examples/desk-timer
@@ -130,7 +113,6 @@ jobs:
       - name: Lint shipped launch example
         id: lint-shipped-launch-example
         background: true
-        continue-on-error: ${{ matrix.experimental || false }}
         run: >
           uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py
           --root plugins/doc/skills/doc-lint/examples/desk-timer-launch
@@ -138,15 +120,97 @@ jobs:
           --no-write
 
       # The legs above run as background steps, so they stay top-level
-      # rather than a parallel group: the canary report's if: references
-      # every leg id. Join them here so its outcome reads are populated.
-      # Container steps take only name/id — a continue-on-error here makes
-      # the runner reject the step (and the whole workflow) at load time.
+      # rather than a parallel group. Join them here so its outcome reads
+      # are populated.
       - name: Wait for check legs
         wait-all:
 
+  # Forward-compatibility canary ahead of the next stable release. Runs
+  # sequentially: a tolerated step failure inside a background leg can end
+  # the run as failure even when every job is green (observed on main),
+  # so the canary keeps ordinary steps plus per-step continue-on-error
+  # and reports failures as an annotation instead.
+  canary:
+    name: verify (3.15)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    env:
+      # The canary leg builds sdists (e.g. fastuuid's pinned PyO3)
+      # against a pre-release CPython; abi3 forward-compat mode lets
+      # the wheel target the stable ABI instead of refusing at build
+      # time.
+      PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
+    steps:
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+          disable-telemetry: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Cache uv-managed CPython
+        id: cache-uv-managed-cpython
+        continue-on-error: true
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/uv-python
+          key: uv-python-${{ runner.os }}-3.15
+      - name: Point uv Python installs at the cached path
+        id: point-uv-python-installs-at-the-cached-path
+        continue-on-error: true
+        run: echo "UV_PYTHON_INSTALL_DIR=$RUNNER_TEMP/uv-python" >> "$GITHUB_ENV"
+      - id: setup-uv-1
+        continue-on-error: true
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.15"
+          cache-suffix: verify-3.15
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        id: setup-uv
+        continue-on-error: true
+        if: steps.setup-uv-1.outcome == 'failure'
+        with:
+          python-version: "3.15"
+          cache-suffix: verify-3.15
+      - name: Sync dependencies
+        id: sync-dependencies
+        continue-on-error: true
+        run: uv sync --locked --group sdk-check
+      - name: Check shared hooks
+        id: check-shared-hooks
+        continue-on-error: true
+        run: uv run python scripts/check_shared_hooks.py
+      - name: Check shared workflows
+        id: check-shared-workflows
+        continue-on-error: true
+        run: uv run python scripts/check_shared_workflows.py
+      - name: Pytest
+        id: pytest
+        continue-on-error: true
+        run: uv run python scripts/structural_coverage.py run --json out/structural-coverage.json
+      - name: Verify docs
+        id: verify-docs
+        continue-on-error: true
+        run: uv run python scripts/verify_docs.py
+      - name: Lint shipped example
+        id: lint-shipped-example
+        continue-on-error: true
+        run: >
+          uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py
+          --root plugins/doc/skills/doc-lint/examples/desk-timer
+          --brief plugins/doc/skills/doc-lint/examples/desk-timer/doc-work/desk-timer/doc-brief.json
+          --no-write
+      - name: Lint shipped launch example
+        id: lint-shipped-launch-example
+        continue-on-error: true
+        run: >
+          uv run python plugins/doc/skills/doc-lint/scripts/doc_lint.py
+          --root plugins/doc/skills/doc-lint/examples/desk-timer-launch
+          --brief plugins/doc/skills/doc-lint/examples/desk-timer-launch/doc-work/desk-timer/doc-brief.json
+          --no-write
       - name: Report 3.15 canary outcome
-        if: matrix.experimental && (steps.cache-uv-managed-cpython.outcome == 'failure' || steps.point-uv-python-installs-at-the-cached-path.outcome == 'failure' || steps.setup-uv.outcome == 'failure' || steps.sync-dependencies.outcome == 'failure' || steps.ruff.outcome == 'failure' || steps.pyright.outcome == 'failure' || steps.check-shared-hooks.outcome == 'failure' || steps.check-shared-workflows.outcome == 'failure' || steps.pytest.outcome == 'failure' || steps.verify-docs.outcome == 'failure' || steps.lint-shipped-example.outcome == 'failure' || steps.lint-shipped-launch-example.outcome == 'failure')
+        if: always() && (steps.cache-uv-managed-cpython.outcome == 'failure' || steps.point-uv-python-installs-at-the-cached-path.outcome == 'failure' || steps.setup-uv.outcome == 'failure' || steps.sync-dependencies.outcome == 'failure' || steps.check-shared-hooks.outcome == 'failure' || steps.check-shared-workflows.outcome == 'failure' || steps.pytest.outcome == 'failure' || steps.verify-docs.outcome == 'failure' || steps.lint-shipped-example.outcome == 'failure' || steps.lint-shipped-launch-example.outcome == 'failure')
         run: |
           echo "::warning::Python 3.15 canary leg failed — forward-compat signal, not a gate failure"
   plugin-load:
