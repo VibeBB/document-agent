@@ -1,5 +1,7 @@
 # document-agent
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/VibeBB/document-agent)
+
 **English** | [日本語](#日本語)
 
 ## English
