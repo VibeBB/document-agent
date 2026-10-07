@@ -88,4 +88,4 @@ release workflow keeps version declarations and `uv.lock` synchronized.
 Version releases are driven by `.github/workflows/release.yml` and
 `scripts/release_bump.sh`; see [operations](operations.md#release-process)
 before changing the release process. The declared SDK version is
-`openhands-sdk==1.52.0` (also checked by the exact README declaration).
+`openhands-sdk==1.53.0` (also checked by the exact README declaration).
