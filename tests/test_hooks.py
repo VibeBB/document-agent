@@ -540,7 +540,7 @@ def test_ensure_llm_profiles_provisions(tmp_path: Path) -> None:
     result = _run(ENSURE_PROFILES_SCRIPT, {}, env=env)
     assert result.returncode == 0
     assert json.loads(result.stdout)["missing"] == []
-    for name in ("vibebb-author", "vibebb-review"):
+    for name in ("vibebb-author", "vibebb-review", "oracle"):
         profile = json.loads((profiles / f"{name}.json").read_text(encoding="utf-8"))
         assert profile["model"] == "test-model"
 
@@ -549,4 +549,8 @@ def test_ensure_llm_profiles_tolerates_missing_settings(tmp_path: Path) -> None:
     env = {"HOME": str(tmp_path / "nohome"), "PATH": "/usr/bin:/bin"}
     result = _run(ENSURE_PROFILES_SCRIPT, {}, env=env)
     assert result.returncode == 0
-    assert json.loads(result.stdout)["missing"] == ["vibebb-author", "vibebb-review"]
+    assert json.loads(result.stdout)["missing"] == [
+        "vibebb-author",
+        "vibebb-review",
+        "oracle",
+    ]

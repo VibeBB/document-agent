@@ -3,7 +3,8 @@
 
 Resolves the plugin root through the same env-var chain the hooks use
 (`DOC_PLUGIN_ROOT`, `$OPENHANDS_PROJECT_DIR/plugins/doc`,
-`~/.agents/plugins/doc`, `~/.openhands/plugins/installed/doc`), checks the
+`~/.agents/plugins/doc`, `~/.openhands/plugins/installed/doc`,
+`~/plugins/installed/doc`, `$OH_PERSISTENCE_DIR/plugins/installed/doc`), checks the
 plugin layout (`.plugin/plugin.json`, `agents/`, `skills/`), and reports which
 sister plugins are installed next to it so the doc agents know whom to ask and
 which questions must go to the user instead. It also counts liaison requests
@@ -46,11 +47,18 @@ PLUGIN = "doc"
 def _plugin_dirs(name: str) -> list[Path]:
     project = os.environ.get(PROJECT_ENV) or "."
     home = Path.home()
-    return [
+    dirs = [
         Path(project).expanduser() / "plugins" / name,
         home / ".agents" / "plugins" / name,
         home / ".openhands" / "plugins" / "installed" / name,
+        # OpenHands docker conversation runtime: inner
+        # HOME=/var/openhands/.openhands holds the installed plugins.
+        home / "plugins" / "installed" / name,
     ]
+    persistence = os.environ.get("OH_PERSISTENCE_DIR")
+    if persistence:
+        dirs.append(Path(persistence).expanduser() / "plugins" / "installed" / name)
+    return dirs
 
 
 def _candidate_roots() -> list[Path]:

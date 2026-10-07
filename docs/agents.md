@@ -30,6 +30,7 @@ the target documents. The deterministic linter, not an agent, owns the
 
 Agent MCP configuration resolves the plugin root in this order:
 `DOC_PLUGIN_ROOT`, `$OPENHANDS_PROJECT_DIR/plugins/doc`,
-`$HOME/.agents/plugins/doc`, and
-`$HOME/.openhands/plugins/installed/doc`. It launches
+`$HOME/.agents/plugins/doc`, `$HOME/.openhands/plugins/installed/doc`,
+`$HOME/plugins/installed/doc`, and
+`$OH_PERSISTENCE_DIR/plugins/installed/doc`. It launches
 `python3 <plugin-root>/scripts/doc_tool.py mcp_server`.

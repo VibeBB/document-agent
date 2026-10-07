@@ -54,6 +54,7 @@ decisions.
 | [SDK v1.51.0 evaluation](research/sdk-v1.51.0-feature-evaluation.md) | SDK v1.51.0 and uv 0.12.22 adoption review |
 | [SDK v1.52.0 evaluation](research/sdk-v1.52.0-feature-evaluation.md) | SDK v1.52.0 adoption review |
 | [SDK v1.53.0 evaluation](research/sdk-v1.53.0-feature-evaluation.md) | SDK v1.53.0 adoption review |
+| [Agent Canvas v1.25 evaluation](research/ac-v1.25-feature-evaluation.md) | Agent Canvas / OpenHands platform surface adoption review |
 
 ## Accepted architecture decisions
 
