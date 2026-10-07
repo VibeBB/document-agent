@@ -140,8 +140,9 @@ jobs:
       # The legs above run as background steps, so they stay top-level
       # rather than a parallel group: the canary report's if: references
       # every leg id. Join them here so its outcome reads are populated.
+      # Container steps take only name/id — a continue-on-error here makes
+      # the runner reject the step (and the whole workflow) at load time.
       - name: Wait for check legs
-        continue-on-error: ${{ matrix.experimental || false }}
         wait-all:
 
       - name: Report 3.15 canary outcome
