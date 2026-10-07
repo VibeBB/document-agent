@@ -7,7 +7,7 @@ product overview see the [README](../README.md).
 ## Supported runtime and availability
 
 The plugin manifest and Python project are currently version `0.1.0`. The
-declared target is OpenHands Software Agent SDK v1.52.0, with Python 3.12+
+declared target is OpenHands Software Agent SDK v1.53.0, with Python 3.12+
 for repository development. There is no doc tools image: hooks and the MCP
 server invoke host `python3`; plugin record, liaison, figure, and lint
 scripts use only the Python standard library. The SDK/tool packages are
