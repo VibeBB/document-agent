@@ -8,7 +8,7 @@ authoritative contribution checklist.
 
 | Path | Responsibility |
 | --- | --- |
-| `plugins/doc/agents/`, `commands/`, `skills/` | OpenHands agents, slash commands, keyword skills, and path rule |
+| `plugins/doc/agents/`, `commands/`, `skills/` | OpenHands agents, slash commands, keyword skills, and path rules |
 | `plugins/doc/scripts/` | Record, figure, liaison, CLI, and MCP runtime |
 | `plugins/doc/hooks/` | Hook configuration, family hook copies, and doc-specific hooks |
 | `plugins/doc/skills/doc-lint/scripts/` | Deterministic brief/document linter |

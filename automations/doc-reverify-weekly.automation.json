@@ -1,0 +1,18 @@
+{
+  "name": "doc-reverify-weekly",
+  "plugins": [
+    {
+      "source": "github:VibeBB/document-agent",
+      "ref": "main",
+      "repo_path": "plugins/doc"
+    }
+  ],
+  "prompt": "Re-run the documentation lint for the workspace doc briefs. For each doc-work/*/doc-brief.json, run `python3 $DOC_PLUGIN_ROOT/skills/doc-lint/scripts/doc_lint.py --brief <path>` (the /doc:write lint stage), compare the fresh doc-lint.json verdicts to the recorded reports, and write a short result to records/. If any document regressed from pass to fail or stale, say so explicitly in the run summary.",
+  "trigger": {
+    "type": "cron",
+    "schedule": "0 3 * * 1",
+    "timezone": "UTC"
+  },
+  "repos": [],
+  "enabled": true
+}

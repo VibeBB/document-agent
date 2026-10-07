@@ -20,6 +20,7 @@ SKILL_NAMES = {
     "doc-inquiry",
     "doc-brief-rules",
     "doc-launch-craft",
+    "doc-out-rules",
     "doc-records",
 }
 COMMAND_NAMES = {"write", "interview", "doctor", "launch"}
@@ -144,6 +145,15 @@ def test_brief_rule_is_path_triggered() -> None:
     head = (PLUGIN_ROOT / "skills" / "doc-brief-rules" / "SKILL.md").read_text(
         encoding="utf-8"
     )[:600]
+    assert "paths:" in head
+    assert "triggers:" not in head
+
+
+def test_out_rule_is_path_triggered() -> None:
+    head = (PLUGIN_ROOT / "skills" / "doc-out-rules" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )[:600]
+    assert ' "**/out/**"' in head
     assert "paths:" in head
     assert "triggers:" not in head
 

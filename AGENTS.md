@@ -45,7 +45,8 @@ plugins/doc/
     ├── doc-records/          # VRP decisions, impressions, and vision-review guidance
     ├── doc-launch-craft/     # Audiences, messages, launch templates, claim rules
     ├── doc-lint/             # doc-brief.json contract + doc_lint.py (stdlib only) + examples
-    └── doc-brief-rules/      # Path-triggered rule on doc-brief.json / doc-lint.json
+    ├── doc-brief-rules/      # Path-triggered rule on doc-brief.json / doc-lint.json
+    └── doc-out-rules/        # Path-triggered rule on generated artifacts under out/
 workspace/
 ├── doc-work/<slug>/          # Brief, inquiries, interview, documents, and lint report
 └── liaison/                  # Sister Liaison Protocol requests and responses

@@ -2,8 +2,12 @@
 
 Hooks are configured in `plugins/doc/hooks/hooks.json`. Each command resolves
 the plugin root by trying `DOC_PLUGIN_ROOT`,
-`$OPENHANDS_PROJECT_DIR/plugins/doc`, `$HOME/.agents/plugins/doc`, and
-`$HOME/.openhands/plugins/installed/doc`, then runs a host `python3` script.
+`$OPENHANDS_PROJECT_DIR/plugins/doc`, `$HOME/.agents/plugins/doc`,
+`$HOME/.openhands/plugins/installed/doc`, `$HOME/plugins/installed/doc`, and
+`$OH_PERSISTENCE_DIR/plugins/installed/doc`, then runs a host `python3`
+script. The two extra candidates resolve the plugin inside an OpenHands
+docker conversation runtime (inner `HOME=/var/openhands/.openhands`); doc is
+stdlib-only, so it keeps working there once resolved.
 Hooks that cannot find the plugin root usually skip; the lint-report guard
 instead fails closed. The shared `require-records` and safety scripts are
 standard-library copies of family-level hooks; do not edit them independently.
@@ -14,7 +18,8 @@ standard-library copies of family-level hooks; do not edit them independently.
 | --- | --- | --- | --- |
 | `session_start` | `*` | `require-records` (`session-start`) | Creates the session marker under `observations/doc/.sessions/` used to delimit new work. Policy or I/O errors print a skip note and exit `0`. |
 | `session_start` | `*` | `doc-doctor` | Advises on plugin layout, installed sister plugins, and unanswered inbound liaison requests. Always emits an allow context and exits `0`, including when the probe fails. |
-| `session_start` | `*` | `ensure-llm-profiles` | Copies the active OpenHands LLM profile into missing `vibebb-author` and `vibebb-review` profiles without overwriting existing ones; reports review-profile vision capability. Advisory and exits `0`. |
+| `session_start` | `*` | `ensure-llm-profiles` | Copies the active OpenHands LLM profile into missing `vibebb-author`, `vibebb-review`, and `oracle` profiles without overwriting existing ones; reports review-profile vision capability. Advisory and exits `0`. |
+| `session_start` | `*` | `ensure-agent-profiles` | Writes `~/.openhands/agent-profiles/vibebb-doc.json` when missing: openhands-kind, `llm_profile_ref=vibebb-author`, MCP scoped to `doc`, no secrets (shared canon). Advisory and exits `0`. |
 | `session_start` | `*` | `intake-attachments` | Scans available AgentCanvas events for user-attached images; materializes recognized data URLs, deduplicates by SHA-256, and appends an intake manifest. Idempotent and always exits `0`; unavailable remote event storage is a no-op, so attachments can be placed in `intake/` manually. |
 | `user_prompt_submit` | `*` | `intake-attachments` | Repeats attachment intake to capture newly attached images. Same idempotent, non-blocking behavior as SessionStart. |
 | `pre_tool_use` | `file_editor\|apply_patch\|terminal` | `protect-lint-report` | Denies writes to `doc-lint.json`, `observations/doc/*.jsonl`, record status/session files, and the attachment manifest. Allows reads and ordinary editable brief/document files. Invalid hook input or protected writes exit `2`; unresolved plugin root exits `2`. |

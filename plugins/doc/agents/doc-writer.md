@@ -14,7 +14,7 @@ mcp_config:
     command: sh
     args:
       - -c
-      - 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/scripts/doc_tool.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/scripts/doc_tool.py" mcp_server'
+      - 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/scripts/doc_tool.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/scripts/doc_tool.py" mcp_server'
 max_iteration_per_run: 120
 max_budget_per_run: 6.0
 hooks:
@@ -23,35 +23,35 @@ hooks:
       hooks:
         - type: command
           name: require-records
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
   stop:
     - matcher: "*"
       hooks:
         - type: command
           name: require-records
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" stop'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" stop'
   pre_tool_use:
     - matcher: file_editor|apply_patch|terminal
       hooks:
         - type: command
           name: protect-lint-report
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/protect_lint_report.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || { echo "doc plugin root unresolved" >&2; exit 2; }; exec python3 "$p/hooks/scripts/protect_lint_report.py"'
     - matcher: terminal
       hooks:
         - type: command
           name: safety-rail
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/safety_rail.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/safety_rail.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/safety_rail.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/safety_rail.py"'
   post_tool_use:
     - matcher: inspect_image_with_vision
       hooks:
         - type: command
           name: record-vision-tool-event
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/record_vision_tool_event.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/record_vision_tool_event.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/record_vision_tool_event.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/record_vision_tool_event.py"'
     - matcher: file_editor
       hooks:
         - type: command
           name: record-image-observation
-          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc"; do [ -f "$c/hooks/scripts/record_image_observation.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/record_image_observation.py"'
+          command: 'p=$(for c in "${DOC_PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/record_image_observation.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/record_image_observation.py"'
 permission_mode: never_confirm
 ---
 
@@ -70,7 +70,9 @@ before starting the next. A stage that writes nothing did not happen.
 
 Sub-agents receive no preloaded Skill context. Resolve the doc plugin root as the first
 existing directory among `$DOC_PLUGIN_ROOT`, `$OPENHANDS_PROJECT_DIR/plugins/doc`,
-`$HOME/.agents/plugins/doc`, and `$HOME/.openhands/plugins/installed/doc`. Then read, in this
+`$HOME/.agents/plugins/doc`, `$HOME/.openhands/plugins/installed/doc`,
+`$HOME/plugins/installed/doc`, and `$OH_PERSISTENCE_DIR/plugins/installed/doc`.
+Then read, in this
 order, and treat any unreadable file as a hard stop:
 
 1. `<doc plugin root>/skills/doc-craft/SKILL.md` — reader journeys, section templates, diagram

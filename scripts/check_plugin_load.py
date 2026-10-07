@@ -22,12 +22,14 @@ EXPECTED_SKILLS = {
     "doc-inquiry",
     "doc-launch-craft",
     "doc-lint",
+    "doc-out-rules",
     "doc-records",
 }
 EXPECTED_COMMANDS = {"doctor", "interview", "launch", "write"}
 EXPECTED_SESSION_START_HOOKS = {
     "doc-doctor",
     "ensure-llm-profiles",
+    "ensure-agent-profiles",
     "intake-attachments",
     "require-records",
 }
