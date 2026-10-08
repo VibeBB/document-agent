@@ -6,6 +6,20 @@
       "latest": "0.12.23",
       "review_by": "2026-11-04",
       "reason": "uv required-version bumps ride the scheduled family dependency-update fan-out (deps-update workflow), not ad-hoc PRs. Re-evaluate if the next scheduled update has not landed by the review date."
+    },
+    {
+      "surface": "python-version",
+      "name": "Python version (pyproject.toml)",
+      "latest": "3.14",
+      "review_by": "2027-01-08",
+      "reason": "3.12/3.13 remain the supported floor; 3.14+ is exercised by the canary legs"
+    },
+    {
+      "surface": "python-version",
+      "name": "Python version (ci.yml)",
+      "latest": "3.14",
+      "review_by": "2027-01-08",
+      "reason": "3.12/3.13 remain the supported floor; 3.14+ is exercised by the canary legs"
     }
   ]
 }
