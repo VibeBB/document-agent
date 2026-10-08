@@ -166,6 +166,10 @@ jobs:
         with:
           python-version: "3.15"
           cache-suffix: verify-3.15
+          # The canary's uv sync always fails while deps lack 3.15
+          # wheels; a cache would only rewrite half-built sdists
+          # against the repo's 10 GB cache budget.
+          enable-cache: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         id: setup-uv
         continue-on-error: true
@@ -173,6 +177,10 @@ jobs:
         with:
           python-version: "3.15"
           cache-suffix: verify-3.15
+          # The canary's uv sync always fails while deps lack 3.15
+          # wheels; a cache would only rewrite half-built sdists
+          # against the repo's 10 GB cache budget.
+          enable-cache: false
       - name: Sync dependencies
         id: sync-dependencies
         continue-on-error: true
