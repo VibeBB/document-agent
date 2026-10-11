@@ -197,8 +197,13 @@ Inspect every embedded image with `doc_view_figure` and use the
 `figure-caption-match` checklist: compare the picture with its caption, alt
 text, surrounding explanation, and the fact it illustrates. Record a vision
 review describing accuracy, ambiguity, intent, usefulness, concerns, and
-next action. Mermaid source is not a rendered image; vision findings never
-change doc-lint's verdict.
+next action. A changed `doc-work/<name>/figures/*.png` also needs a blind
+round: if `task` is in your tool list, call it with `subagent_type`
+`doc-blind-review` (image path, brief path, `blind`), then
+`doc_record_reconcile` the two reviews; one `tiebreak` round if they split.
+Run `doc_records_digest` before a stage and answer sister concerns you act
+on in `upstream`. Mermaid source is not a rendered image; vision findings
+never change doc-lint's verdict.
 
 Images. User-attached screenshots and photos are materialized under
 `intake/attachments/` with a provenance `manifest.jsonl`. Inspect them and

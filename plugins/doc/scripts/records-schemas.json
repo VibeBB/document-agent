@@ -34,6 +34,28 @@
         "title": "DecisionOption",
         "type": "object"
       },
+      "EventRef": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "description": "Plugin that wrote the record",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "System",
+            "type": "string"
+          },
+          "event_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "event_id"
+        ],
+        "title": "EventRef",
+        "type": "object"
+      },
       "EvidenceInput": {
         "additionalProperties": false,
         "properties": {
@@ -47,6 +69,7 @@
               }
             ],
             "default": null,
+            "description": "Workspace-relative file (hashed)",
             "title": "Path"
           },
           "reference": {
@@ -59,24 +82,51 @@
               }
             ],
             "default": null,
+            "description": "Standard, datasheet or law cited when there is no file",
             "title": "Reference"
           }
         },
         "title": "EvidenceInput",
         "type": "object"
+      },
+      "InsightRef": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "description": "Plugin that wrote the record",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "System",
+            "type": "string"
+          },
+          "event_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Insight Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "event_id",
+          "insight_id"
+        ],
+        "title": "InsightRef",
+        "type": "object"
       }
     },
     "additionalProperties": false,
-    "description": "What the agent supplies; evidence paths are hashed by the writer.",
     "properties": {
       "id": {
-        "description": "Stable decision id, e.g. 'wire-gauge-power'",
+        "description": "Stable decision id, e.g. 'readme-quick-start'",
         "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
         "title": "Id",
         "type": "string"
       },
       "stage": {
-        "description": "Stage the decision belongs to",
         "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
         "title": "Stage",
         "type": "string"
@@ -112,6 +162,14 @@
         "minLength": 200,
         "title": "Rationale",
         "type": "string"
+      },
+      "evidence": {
+        "items": {
+          "$ref": "#/$defs/EvidenceInput"
+        },
+        "minItems": 1,
+        "title": "Evidence",
+        "type": "array"
       },
       "assumptions": {
         "items": {
@@ -149,12 +207,19 @@
         "title": "Decided By",
         "type": "string"
       },
-      "evidence": {
+      "impression_refs": {
+        "description": "Impressions (any plugin) behind it",
         "items": {
-          "$ref": "#/$defs/EvidenceInput"
+          "$ref": "#/$defs/EventRef"
         },
-        "minItems": 1,
-        "title": "Evidence",
+        "title": "Impression Refs",
+        "type": "array"
+      },
+      "insight_refs": {
+        "items": {
+          "$ref": "#/$defs/InsightRef"
+        },
+        "title": "Insight Refs",
         "type": "array"
       }
     },
@@ -166,16 +231,383 @@
       "options",
       "chosen",
       "rationale",
+      "evidence",
       "risks",
-      "revisit_when",
-      "evidence"
+      "revisit_when"
     ],
     "title": "DecisionInput",
     "type": "object"
   },
   "impression": {
+    "$defs": {
+      "Claim": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "minLength": 8,
+            "title": "Text",
+            "type": "string"
+          },
+          "anchor": {
+            "description": "Exact token from the artifact (part number, net, cavity, label)",
+            "minLength": 2,
+            "title": "Anchor",
+            "type": "string"
+          },
+          "artifact": {
+            "description": "Workspace-relative file the claim reads",
+            "minLength": 1,
+            "title": "Artifact",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "anchor",
+          "artifact"
+        ],
+        "title": "Claim",
+        "type": "object"
+      },
+      "Concern": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "minLength": 8,
+            "title": "Text",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "about": {
+            "description": "Plugin that owns it, or 'self'",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "About",
+            "type": "string"
+          },
+          "anchor": {
+            "anyOf": [
+              {
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Anchor"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "severity",
+          "about"
+        ],
+        "title": "Concern",
+        "type": "object"
+      },
+      "Facets": {
+        "additionalProperties": false,
+        "properties": {
+          "observed": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Observed",
+            "type": "array"
+          },
+          "works": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Works",
+            "type": "array"
+          },
+          "concerns": {
+            "items": {
+              "$ref": "#/$defs/Concern"
+            },
+            "title": "Concerns",
+            "type": "array"
+          },
+          "no_concerns_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "No Concerns Reason"
+          },
+          "feelings": {
+            "$ref": "#/$defs/Feelings"
+          },
+          "next_actions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Next Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "observed",
+          "works",
+          "feelings",
+          "next_actions"
+        ],
+        "title": "Facets",
+        "type": "object"
+      },
+      "Feelings": {
+        "additionalProperties": false,
+        "properties": {
+          "maker": {
+            "minLength": 8,
+            "title": "Maker",
+            "type": "string"
+          },
+          "user": {
+            "minLength": 8,
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "maker",
+          "user"
+        ],
+        "title": "Feelings",
+        "type": "object"
+      },
+      "Insight": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "hypothesis": {
+            "minLength": 20,
+            "title": "Hypothesis",
+            "type": "string"
+          },
+          "proposed_change": {
+            "title": "Proposed Change",
+            "type": "string"
+          },
+          "expected_effect": {
+            "title": "Expected Effect",
+            "type": "string"
+          },
+          "test": {
+            "description": "How to check it, ideally a deterministic gate",
+            "title": "Test",
+            "type": "string"
+          },
+          "target": {
+            "description": "Plugin that would change",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Target",
+            "type": "string"
+          },
+          "revisits": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/InsightRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "revisit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Revisit Reason"
+          }
+        },
+        "required": [
+          "id",
+          "hypothesis",
+          "proposed_change",
+          "expected_effect",
+          "test",
+          "target"
+        ],
+        "title": "Insight",
+        "type": "object"
+      },
+      "InsightRef": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "description": "Plugin that wrote the record",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "System",
+            "type": "string"
+          },
+          "event_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Insight Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "event_id",
+          "insight_id"
+        ],
+        "title": "InsightRef",
+        "type": "object"
+      },
+      "Upstream": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "System",
+            "type": "string"
+          },
+          "event_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "disposition": {
+            "enum": [
+              "adopted",
+              "deferred",
+              "disputed",
+              "noted"
+            ],
+            "title": "Disposition",
+            "type": "string"
+          },
+          "effect": {
+            "minLength": 40,
+            "title": "Effect",
+            "type": "string"
+          },
+          "concern_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Concern Ids"
+          }
+        },
+        "required": [
+          "system",
+          "event_id",
+          "disposition",
+          "effect"
+        ],
+        "title": "Upstream",
+        "type": "object"
+      }
+    },
     "additionalProperties": false,
     "properties": {
+      "impression": {
+        "title": "Impression",
+        "type": "string"
+      },
+      "facets": {
+        "$ref": "#/$defs/Facets"
+      },
+      "claims": {
+        "items": {
+          "$ref": "#/$defs/Claim"
+        },
+        "title": "Claims",
+        "type": "array"
+      },
+      "insights": {
+        "items": {
+          "$ref": "#/$defs/Insight"
+        },
+        "title": "Insights",
+        "type": "array"
+      },
+      "upstream": {
+        "items": {
+          "$ref": "#/$defs/Upstream"
+        },
+        "title": "Upstream",
+        "type": "array"
+      },
+      "confidence": {
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "title": "Confidence",
+        "type": "string"
+      },
+      "unknowns": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Unknowns",
+        "type": "array"
+      },
+      "delta": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "What is new when an earlier impression reads similarly",
+        "title": "Delta"
+      },
       "stage": {
         "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
         "title": "Stage",
@@ -189,22 +621,361 @@
         "minItems": 1,
         "title": "Artifacts",
         "type": "array"
-      },
-      "impression": {
-        "title": "Impression",
-        "type": "string"
       }
     },
     "required": [
+      "impression",
+      "facets",
+      "claims",
+      "confidence",
       "stage",
-      "artifacts",
-      "impression"
+      "artifacts"
     ],
     "title": "StageImpressionInput",
     "type": "object"
   },
   "vision_review": {
     "$defs": {
+      "Claim": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "minLength": 8,
+            "title": "Text",
+            "type": "string"
+          },
+          "anchor": {
+            "description": "Exact token from the artifact (part number, net, cavity, label)",
+            "minLength": 2,
+            "title": "Anchor",
+            "type": "string"
+          },
+          "artifact": {
+            "description": "Workspace-relative file the claim reads",
+            "minLength": 1,
+            "title": "Artifact",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "anchor",
+          "artifact"
+        ],
+        "title": "Claim",
+        "type": "object"
+      },
+      "Concern": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "minLength": 8,
+            "title": "Text",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "about": {
+            "description": "Plugin that owns it, or 'self'",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "About",
+            "type": "string"
+          },
+          "anchor": {
+            "anyOf": [
+              {
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Anchor"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "severity",
+          "about"
+        ],
+        "title": "Concern",
+        "type": "object"
+      },
+      "Facets": {
+        "additionalProperties": false,
+        "properties": {
+          "observed": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Observed",
+            "type": "array"
+          },
+          "works": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Works",
+            "type": "array"
+          },
+          "concerns": {
+            "items": {
+              "$ref": "#/$defs/Concern"
+            },
+            "title": "Concerns",
+            "type": "array"
+          },
+          "no_concerns_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "No Concerns Reason"
+          },
+          "feelings": {
+            "$ref": "#/$defs/Feelings"
+          },
+          "next_actions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Next Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "observed",
+          "works",
+          "feelings",
+          "next_actions"
+        ],
+        "title": "Facets",
+        "type": "object"
+      },
+      "Feelings": {
+        "additionalProperties": false,
+        "properties": {
+          "maker": {
+            "minLength": 8,
+            "title": "Maker",
+            "type": "string"
+          },
+          "user": {
+            "minLength": 8,
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "maker",
+          "user"
+        ],
+        "title": "Feelings",
+        "type": "object"
+      },
+      "Insight": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "hypothesis": {
+            "minLength": 20,
+            "title": "Hypothesis",
+            "type": "string"
+          },
+          "proposed_change": {
+            "title": "Proposed Change",
+            "type": "string"
+          },
+          "expected_effect": {
+            "title": "Expected Effect",
+            "type": "string"
+          },
+          "test": {
+            "description": "How to check it, ideally a deterministic gate",
+            "title": "Test",
+            "type": "string"
+          },
+          "target": {
+            "description": "Plugin that would change",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Target",
+            "type": "string"
+          },
+          "revisits": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/InsightRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "revisit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Revisit Reason"
+          }
+        },
+        "required": [
+          "id",
+          "hypothesis",
+          "proposed_change",
+          "expected_effect",
+          "test",
+          "target"
+        ],
+        "title": "Insight",
+        "type": "object"
+      },
+      "InsightRef": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "description": "Plugin that wrote the record",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "System",
+            "type": "string"
+          },
+          "event_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Insight Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "event_id",
+          "insight_id"
+        ],
+        "title": "InsightRef",
+        "type": "object"
+      },
+      "Lookback": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "description": "Index into claims",
+            "minimum": 0,
+            "title": "Claim",
+            "type": "integer"
+          },
+          "verdict": {
+            "enum": [
+              "confirmed",
+              "refuted",
+              "uncertain"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          },
+          "note": {
+            "minLength": 8,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim",
+          "verdict",
+          "note"
+        ],
+        "title": "Lookback",
+        "type": "object"
+      },
+      "Upstream": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "System",
+            "type": "string"
+          },
+          "event_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "disposition": {
+            "enum": [
+              "adopted",
+              "deferred",
+              "disputed",
+              "noted"
+            ],
+            "title": "Disposition",
+            "type": "string"
+          },
+          "effect": {
+            "minLength": 40,
+            "title": "Effect",
+            "type": "string"
+          },
+          "concern_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Concern Ids"
+          }
+        },
+        "required": [
+          "system",
+          "event_id",
+          "disposition",
+          "effect"
+        ],
+        "title": "Upstream",
+        "type": "object"
+      },
       "VisionFinding": {
         "additionalProperties": false,
         "properties": {
@@ -239,6 +1010,63 @@
     },
     "additionalProperties": false,
     "properties": {
+      "impression": {
+        "title": "Impression",
+        "type": "string"
+      },
+      "facets": {
+        "$ref": "#/$defs/Facets"
+      },
+      "claims": {
+        "items": {
+          "$ref": "#/$defs/Claim"
+        },
+        "title": "Claims",
+        "type": "array"
+      },
+      "insights": {
+        "items": {
+          "$ref": "#/$defs/Insight"
+        },
+        "title": "Insights",
+        "type": "array"
+      },
+      "upstream": {
+        "items": {
+          "$ref": "#/$defs/Upstream"
+        },
+        "title": "Upstream",
+        "type": "array"
+      },
+      "confidence": {
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "title": "Confidence",
+        "type": "string"
+      },
+      "unknowns": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Unknowns",
+        "type": "array"
+      },
+      "delta": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "What is new when an earlier impression reads similarly",
+        "title": "Delta"
+      },
       "image_path": {
         "anyOf": [
           {
@@ -275,6 +1103,16 @@
         "title": "Checklist",
         "type": "string"
       },
+      "reviewer": {
+        "default": "primary",
+        "enum": [
+          "primary",
+          "blind",
+          "tiebreak"
+        ],
+        "title": "Reviewer",
+        "type": "string"
+      },
       "findings": {
         "items": {
           "$ref": "#/$defs/VisionFinding"
@@ -282,29 +1120,258 @@
         "title": "Findings",
         "type": "array"
       },
-      "impression": {
-        "title": "Impression",
+      "lookback": {
+        "items": {
+          "$ref": "#/$defs/Lookback"
+        },
+        "title": "Lookback",
+        "type": "array"
+      }
+    },
+    "required": [
+      "impression",
+      "facets",
+      "claims",
+      "confidence",
+      "model",
+      "checklist",
+      "lookback"
+    ],
+    "title": "VisionReviewInput",
+    "type": "object"
+  },
+  "reconcile": {
+    "additionalProperties": false,
+    "properties": {
+      "reviews": {
+        "description": "event_ids of [primary, blind] or [primary, blind, tiebreak]",
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 3,
+        "minItems": 2,
+        "title": "Reviews",
+        "type": "array"
+      }
+    },
+    "required": [
+      "reviews"
+    ],
+    "title": "ReconcileInput",
+    "type": "object"
+  },
+  "insight": {
+    "$defs": {
+      "EvidenceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Workspace-relative file (hashed)",
+            "title": "Path"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Standard, datasheet or law cited when there is no file",
+            "title": "Reference"
+          }
+        },
+        "title": "EvidenceInput",
+        "type": "object"
+      },
+      "GateResult": {
+        "additionalProperties": false,
+        "properties": {
+          "gate": {
+            "minLength": 1,
+            "title": "Gate",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "pass",
+              "fail",
+              "unknown"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gate",
+          "verdict"
+        ],
+        "title": "GateResult",
+        "type": "object"
+      },
+      "InsightRef": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "description": "Plugin that wrote the record",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "System",
+            "type": "string"
+          },
+          "event_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "title": "Insight Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "event_id",
+          "insight_id"
+        ],
+        "title": "InsightRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "insight": {
+        "$ref": "#/$defs/InsightRef"
+      },
+      "status": {
+        "enum": [
+          "tried",
+          "adopted",
+          "rejected",
+          "deferred",
+          "superseded"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason": {
+        "minLength": 40,
+        "title": "Reason",
+        "type": "string"
+      },
+      "evidence": {
+        "items": {
+          "$ref": "#/$defs/EvidenceInput"
+        },
+        "minItems": 1,
+        "title": "Evidence",
+        "type": "array"
+      },
+      "gate_verdicts": {
+        "items": {
+          "$ref": "#/$defs/GateResult"
+        },
+        "title": "Gate Verdicts",
+        "type": "array"
+      },
+      "decision_refs": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Decision Refs",
+        "type": "array"
+      },
+      "revisit_when": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Revisit When"
+      }
+    },
+    "required": [
+      "insight",
+      "status",
+      "reason",
+      "evidence"
+    ],
+    "title": "InsightStatusInput",
+    "type": "object"
+  },
+  "song_receipt": {
+    "additionalProperties": false,
+    "properties": {
+      "delivery": {
+        "description": "liaison/<id>.bard-song.json addressed to this plugin",
+        "title": "Delivery",
+        "type": "string"
+      },
+      "felt": {
+        "description": "What the song made you feel about the design (160+ chars)",
+        "title": "Felt",
+        "type": "string"
+      },
+      "prompted_review": {
+        "title": "Prompted Review",
+        "type": "boolean"
+      },
+      "follow_up": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Follow Up"
+      }
+    },
+    "required": [
+      "delivery",
+      "felt",
+      "prompted_review"
+    ],
+    "title": "SongReceiptInput",
+    "type": "object"
+  },
+  "read": {
+    "additionalProperties": false,
+    "properties": {
+      "artifact": {
+        "description": "Workspace-relative sister artifact you took in",
+        "title": "Artifact",
+        "type": "string"
+      },
+      "producer": {
+        "description": "Plugin that produced it",
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "title": "Producer",
         "type": "string"
       }
     },
     "required": [
-      "model",
-      "checklist",
-      "impression"
+      "artifact",
+      "producer"
     ],
-    "title": "VisionReviewInput",
-    "type": "object",
-    "anyOf": [
-      {
-        "required": [
-          "image_path"
-        ]
-      },
-      {
-        "required": [
-          "source_event_id"
-        ]
-      }
-    ]
+    "title": "ReadInput",
+    "type": "object"
   }
 }

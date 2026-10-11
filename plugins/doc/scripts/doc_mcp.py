@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import sys
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from doc_records import (
-    record_decision,
-    record_impression,
-    record_vision_review,
+    RECORDERS,
+    records_digest,
+    records_search,
     records_summary,
 )
 
@@ -88,23 +87,74 @@ RECORD_SCHEMAS["vision_review"]["anyOf"] = [
 TOOLS: list[dict[str, Any]] = [
     {
         "name": "doc_record_decision",
-        "description": "Append a hash-bound design decision.",
+        "description": "Append a chained decision with options, principles, evidence.",
         "inputSchema": RECORD_SCHEMAS["decision"],
     },
     {
         "name": "doc_record_impression",
-        "description": "Append a stage impression bound to artifacts.",
+        "description": (
+            "Append a stage impression: 400+ chars, facets, claims quoting exact "
+            "tokens of cited artifacts, confidence, and upstream answers."
+        ),
         "inputSchema": RECORD_SCHEMAS["impression"],
     },
     {
         "name": "doc_record_vision_review",
-        "description": "Append an image review bound to an image or existing event.",
+        "description": (
+            "Append a primary, blind, or tiebreak image review with grounded "
+            "claims and a lookback per claim. Advisory only."
+        ),
         "inputSchema": RECORD_SCHEMAS["vision_review"],
     },
     {
+        "name": "doc_record_reconcile",
+        "description": "Reconcile primary, blind, and tiebreak reviews of one image.",
+        "inputSchema": RECORD_SCHEMAS["reconcile"],
+    },
+    {
+        "name": "doc_record_insight",
+        "description": "Move an impression insight through its lifecycle.",
+        "inputSchema": RECORD_SCHEMAS["insight"],
+    },
+    {
+        "name": "doc_record_song_receipt",
+        "description": "Receive a bard song addressed to doc (no reply loop).",
+        "inputSchema": RECORD_SCHEMAS["song_receipt"],
+    },
+    {
+        "name": "doc_record_read",
+        "description": "Record that a sister artifact was taken in.",
+        "inputSchema": RECORD_SCHEMAS["read"],
+    },
+    {
         "name": "doc_records_status",
-        "description": "Summarize record counts and the last Stop-hook verdict.",
+        "description": "Summarize record counts, chain integrity, last Stop verdict.",
         "inputSchema": _object({}, []),
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "doc_records_digest",
+        "description": "Family digest: open concerns, disputes, unread items, songs.",
+        "inputSchema": _object({}, []),
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "doc_records_search",
+        "description": "Search every plugin's impressions.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "system": {"type": "string"},
+                "kind": {"type": "string"},
+                "stage": {"type": "string"},
+                "artifact": {"type": "string"},
+                "severity": {"type": "string"},
+                "open_only": {"type": "boolean"},
+                "limit": {"type": "integer", "minimum": 1},
+            },
+            "additionalProperties": False,
+        },
         "annotations": {"readOnlyHint": True},
     },
     {
@@ -153,20 +203,17 @@ TOOLS: list[dict[str, Any]] = [
 def _call(
     name: str, args: dict[str, Any], tool_call_id: object = None
 ) -> dict[str, Any]:
-    handlers: dict[str, Callable[..., dict[str, Any]]] = {
-        "doc_record_decision": record_decision,
-        "doc_record_impression": record_impression,
-        "doc_record_vision_review": record_vision_review,
-        "doc_records_status": lambda: records_summary(),
+    record_tools = {
+        f"doc_record_{k.replace('-', '_')}": v for k, v in RECORDERS.items()
     }
-    if name in handlers:
-        if name in {
-            "doc_record_decision",
-            "doc_record_impression",
-            "doc_record_vision_review",
-        }:
-            return handlers[name](args)
-        return handlers[name]()
+    if name in record_tools:
+        return record_tools[name](args)
+    if name == "doc_records_status":
+        return records_summary()
+    if name == "doc_records_digest":
+        return records_digest()
+    if name == "doc_records_search":
+        return records_search(args)
     if name == "doc_lint":
         from doc_figures import lint
 

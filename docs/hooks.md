@@ -37,7 +37,9 @@ file contents. For terminal calls it checks write operators and known
 destination-taking commands; read-only inspection is allowed. Protected
 reports and logs must be written through their producer: run `doc_lint.py`
 for `doc-lint.json`, record tools for VRP JSONL, the Stop hook for the status
-file, and attachment intake for the manifest.
+file, and attachment intake for the manifest. Bard song deliveries
+(`liaison/*.bard-song.json`) are immutable: only bard writes them, and doc
+answers with `record song-receipt`.
 
 The safety rail parses commands with `shlex` and checks a small explicit
 denylist: root/home recursive forced deletion, block-device writes, selected
@@ -45,9 +47,16 @@ partition/filesystem/power tools, `kill -1`, and git operations prohibited by
 the repository agreement. It allows commands it cannot positively identify
 as prohibited. Do not rely on it as a substitute for careful review.
 
+## Agent-scoped: blind-guard
+
+`doc-blind-review` declares `blind-guard` (`blind_guard.py`, canonical
+across the family) on `pre_tool_use` for `file_editor|apply_patch|terminal|grep|glob`:
+it denies reads of `observations/`, advisory records, liaison answers and
+songs so the blind vision review stays independent; exit 2 on denial.
+
 ## Installation and agent hooks
 
-Plugin hooks are not inherited by delegated agents. Each of the four
+Plugin hooks are not inherited by delegated agents. Each of the five
 `AgentDefinition` files repeats the terminal safety rail and lint-report
 guard in its own `pre_tool_use` list. The MCP server and hook launchers both
 use the plugin-root resolution chain above. Missing optional attachment,

@@ -31,6 +31,7 @@ plugins/doc/
 │   ├── doc-liaison.md        # Gathers facts: workspace survey, sister inquiries (task)
 │   ├── doc-writer.md         # Brief, outline, README / manual / technical reference, lint
 │   ├── doc-review.md         # Read-only review as first-time reader, user, engineer, buyer
+│   ├── doc-blind-review.md   # Blind second vision review of figures (VRP v2)
 │   └── doc-launch.md         # Launch brief, product page / press release / demo / plan, lint
 ├── commands/
 │   ├── write.md              # /doc:write — context.md, liaison, interview, writer, verify

@@ -69,3 +69,4 @@ decisions.
 | [0007](adr/ADR-0007-vision-lane.md) | Inspect and record figures and user-attached images |
 | [0008](adr/ADR-0008-records-liaison-mcp.md) | Combine standard-library MCP tools, VRP, SLP v2, and hash-bound facts |
 | [0009](adr/ADR-0009-structural-coverage.md) | Structural coverage gate (C0, C1, C2, MC/DC, boundaries) |
+| [0010](adr/ADR-0010-vrp-v2-records.md) | VRP v2 records, blind figure review and song receipts |
