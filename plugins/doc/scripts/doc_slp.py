@@ -639,25 +639,22 @@ def ux_inbox(root: Path | None = None) -> dict[str, Any]:
 
 
 def _event_ids(root: Path, filenames: tuple[str, ...], agent: str = PLUGIN) -> set[str]:
+    """Event ids from intact VRP v2 logs; a broken chain refuses every ref."""
+    kinds = {name: kind for kind, name in _records.LOG_FILES.items()}
     found: set[str] = set()
     for filename in filenames:
         path = root / "observations" / agent / filename
         parents = (root / "observations", root / "observations" / agent)
         if any(parent.is_symlink() for parent in parents) or path.is_symlink():
             continue
-        if not path.is_file():
+        records, problems = _records.verify_log(path, kinds[filename])
+        if problems:
             continue
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except (OSError, UnicodeDecodeError):
-            continue
-        for line in lines:
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(record, dict) and isinstance(record.get("event_id"), str):
-                found.add(cast(str, record["event_id"]))
+        found.update(
+            cast(str, record["event_id"])
+            for record in records
+            if isinstance(record.get("event_id"), str)
+        )
     return found
 
 
