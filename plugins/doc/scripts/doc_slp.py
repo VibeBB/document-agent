@@ -311,7 +311,7 @@ def validate_request(
 
 
 def validate_response(value: object, root: Path) -> dict[str, Any]:
-    data = _closed(value, RESPONSE_KEYS, RESPONSE_KEYS, "response")
+    data = _closed(value, RESPONSE_KEYS | {"records_heads"}, RESPONSE_KEYS, "response")
     if data["schema_version"] != SCHEMA_VERSION:
         raise LiaisonError(f"response.schema_version must be {SCHEMA_VERSION}")
     if data["system"] != SYSTEM:
@@ -751,6 +751,21 @@ def _done_problems(
     return problems
 
 
+def _records_heads(root: Path) -> tuple[dict[str, str], list[str]]:
+    """Chain head per intact VRP log, plus the kinds whose chain is broken."""
+    heads: dict[str, str] = {}
+    broken: list[str] = []
+    for kind, name in _records.LOG_FILES.items():
+        records, problems = _records.verify_log(
+            root / "observations" / PLUGIN / name, kind
+        )
+        if problems:
+            broken.append(kind)
+        else:
+            heads[kind] = _records.chain_head(records)
+    return heads, broken
+
+
 def ux_respond(payload: object, root: Path | None = None) -> dict[str, Any]:
     workspace = workspace_root(root)
     data = _closed(payload, RESPOND_KEYS, RESPOND_REQUIRED, "response input")
@@ -853,6 +868,11 @@ def ux_respond(payload: object, root: Path | None = None) -> dict[str, Any]:
                 workspace, artifacts, verdicts, decision_refs, impression_refs
             )
         )
+    heads, broken_logs = _records_heads(workspace)
+    if status == "done" and broken_logs:
+        problems.append(
+            f"refusing 'done': VRP logs fail integrity ({', '.join(broken_logs)})"
+        )
     if problems:
         return {
             "ok": False,
@@ -873,6 +893,7 @@ def ux_respond(payload: object, root: Path | None = None) -> dict[str, Any]:
         "decision_refs": decision_refs,
         "impression_refs": impression_refs,
         "questions_for_user": questions,
+        "records_heads": heads,
         "responded_at": datetime.now().astimezone().isoformat(),
     }
     validate_response(response, workspace)
