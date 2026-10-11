@@ -708,3 +708,20 @@ def test_event_ids_refuse_every_ref_from_a_broken_chain(tmp_path: Path) -> None:
     with log.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(forged) + "\n")
     assert event_ids(tmp_path, (log.name,)) == set()
+
+
+def test_records_heads_are_genesis_then_skip_a_broken_chain(tmp_path: Path) -> None:
+    records = doc_slp._records  # pyright: ignore[reportPrivateUsage]
+    heads, broken = doc_slp._records_heads(tmp_path)  # pyright: ignore[reportPrivateUsage]
+    assert broken == []
+    assert heads == dict.fromkeys(records.LOG_FILES, records.GENESIS)
+    log = (
+        tmp_path / "observations" / doc_slp.PLUGIN / records.LOG_FILES["upstream_read"]
+    )
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(
+        '{"schema_version": 2, "event_id": "' + "1" * 64 + '"}\n', encoding="utf-8"
+    )
+    heads, broken = doc_slp._records_heads(tmp_path)  # pyright: ignore[reportPrivateUsage]
+    assert broken == ["upstream_read"]
+    assert "upstream_read" not in heads
