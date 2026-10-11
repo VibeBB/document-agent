@@ -233,10 +233,10 @@ def test_dependency_accepts_a_terminal_sister_response(tmp_path: Path) -> None:
     write_request(tmp_path, "waiting", depends_on=["stale-upstream"])
     write_request(tmp_path, "failed-upstream", target="wire")
     write_request(tmp_path, "failed-waiting", depends_on=["failed-upstream"])
-    event_id = "a" * 64
+    event_id, _ = _records(tmp_path)
     log = tmp_path / "observations/wire/decisions.jsonl"
     log.parent.mkdir(parents=True)
-    log.write_text(json.dumps({"event_id": event_id}) + "\n", encoding="utf-8")
+    log.write_bytes((tmp_path / "observations/doc/decisions.jsonl").read_bytes())
     response = {
         "schema_version": 2,
         "system": "ux-creator",
@@ -696,3 +696,15 @@ def test_doctor_reports_unanswered_liaison_requests(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     context = json.loads(result.stdout)["additionalContext"]
     assert "requests for doc=1 unanswered=1" in context
+
+
+def test_event_ids_refuse_every_ref_from_a_broken_chain(tmp_path: Path) -> None:
+    decision, _ = _records(tmp_path)
+    log = tmp_path / "observations/doc/decisions.jsonl"
+    event_ids = doc_slp._event_ids  # pyright: ignore[reportPrivateUsage]
+    assert event_ids(tmp_path, (log.name,)) == {decision}
+    forged = json.loads(log.read_text(encoding="utf-8").splitlines()[0])
+    forged["rationale"] = "forged after the fact"
+    with log.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(forged) + "\n")
+    assert event_ids(tmp_path, (log.name,)) == set()
