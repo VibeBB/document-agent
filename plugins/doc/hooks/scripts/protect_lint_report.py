@@ -115,6 +115,11 @@ def _is_protected(value: str) -> bool:
             len(parts) >= 3
             and parts[-3:] == ("intake", "attachments", "manifest.jsonl")
         )
+        or (
+            len(parts) >= 2
+            and parts[-2] == "liaison"
+            and base.endswith(".bard-song.json")
+        )
     )
 
 

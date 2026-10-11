@@ -13,7 +13,13 @@ FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 FENCE_RE = re.compile(r"(?ms)^(```+|~~~+).*?^\1[ \t]*$")
 INLINE_CODE_PATTERN = re.compile(r"(`+)(?:(?!\1).)+?\1", re.S)
-AGENT_NAMES = {"doc-writer", "doc-liaison", "doc-review", "doc-launch"}
+AGENT_NAMES = {
+    "doc-writer",
+    "doc-liaison",
+    "doc-review",
+    "doc-launch",
+    "doc-blind-review",
+}
 SKILL_NAMES = {
     "doc-craft",
     "doc-lint",
@@ -123,8 +129,9 @@ def test_review_agent_is_read_only() -> None:
         "Read-only for documents: you run read commands (`cat`, `ls`, "
         "`git --no-pager diff`, the linter with `--no-write`) and use "
         "`file_editor` only with `view`. You may call "
-        "`doc_view_figure` and write only `doc_record_vision_review` and "
-        "`doc_record_impression`." in normalized
+        "`doc_view_figure` and write only `doc_record_vision_review`, "
+        "`doc_record_impression`, `doc_record_read` and "
+        "`doc_record_song_receipt`." in normalized
     )
     assert _frontmatter(PLUGIN_ROOT / "agents" / "doc-review.md")["model"] == (
         "vibebb-review"

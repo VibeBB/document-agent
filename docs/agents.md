@@ -9,6 +9,7 @@ are not inherited by task sub-agents. All use `permission_mode: never_confirm`.
 | `doc-liaison` | Survey workspace and sister evidence, write survey/inquiry files, and identify user questions; never writes product documents | `vibebb-author` | `terminal`, `file_editor`, `grep`, `glob`, `task_tool_set` | 60 iterations; budget 3.0 |
 | `doc-writer` | Create brief, outline, README/manual/technical reference, lint, and incorporate review | `vibebb-author` | `terminal`, `file_editor`, `grep`, `glob`, `task_tracker`, `task_tool_set` | 120 iterations; budget 6.0 |
 | `doc-review` | Review as first-time visitor, user, engineer, and (for launch material) buyer; return findings only | `vibebb-review` | `terminal`, `file_editor`, `grep`, `glob` | 30 iterations; budget 1.5 |
+| `doc-blind-review` | Independent blind or tiebreak vision review of one `doc-work/*/figures/*.png`; cannot read earlier reviews (`blind-guard`) | `vibebb-review` | `terminal`, `file_editor`, `grep`, `glob`, `VisionInspectTool` | 20 iterations; budget 1.5 |
 | `doc-launch` | Produce fact-grounded product page, press release, demo script, and launch plan | `vibebb-author` | `terminal`, `file_editor`, `grep`, `glob`, `task_tracker`, `task_tool_set` | 120 iterations; budget 6.0 |
 
 The model profile names resolve through the OpenHands profile store. On

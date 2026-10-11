@@ -195,6 +195,38 @@ def test_view_observation_blocks_stop_until_review_is_recorded(
             "checklist": "figure-reader",
             "findings": [],
             "impression": impression,
+            "facets": {
+                "observed": [
+                    "the status flow is drawn left to right",
+                    "the labels sit beside each state",
+                ],
+                "works": ["labels match the caption"],
+                "concerns": [
+                    {
+                        "id": "c1",
+                        "text": "final interface may rename the states",
+                        "severity": "info",
+                        "about": "self",
+                        "anchor": "status",
+                    }
+                ],
+                "feelings": {
+                    "maker": "can keep the figure tied to its hash",
+                    "user": "scans the flow at a glance",
+                },
+                "next_actions": ["recheck the image after interface changes"],
+            },
+            "claims": [
+                {
+                    "text": "the figure shows the status flow",
+                    "anchor": "status",
+                    "artifact": "photo.png",
+                }
+            ],
+            "lookback": [
+                {"claim": 0, "verdict": "confirmed", "note": "second look shows it"}
+            ],
+            "confidence": "medium",
         },
         tmp_path,
     )

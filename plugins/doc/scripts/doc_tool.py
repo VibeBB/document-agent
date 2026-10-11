@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -30,13 +29,12 @@ def _print(value: object) -> None:
 def _record(args: argparse.Namespace) -> dict[str, Any]:
     if args.action == "status":
         return doc_records.records_summary()
+    if args.action == "digest":
+        return doc_records.records_digest()
     payload = _payload(args.json_file)
-    handlers: dict[str, Callable[[object], dict[str, Any]]] = {
-        "decision": doc_records.record_decision,
-        "impression": doc_records.record_impression,
-        "vision-review": doc_records.record_vision_review,
-    }
-    return handlers[args.action](payload)
+    if args.action == "search":
+        return doc_records.records_search(payload)
+    return doc_records.RECORDERS[args.action](payload)
 
 
 def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
@@ -68,10 +66,11 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     record = subparsers.add_parser("record")
     record_sub = record.add_subparsers(dest="action", required=True)
-    for action in ("decision", "impression", "vision-review"):
+    for action in (*doc_records.RECORDERS, "search"):
         command = record_sub.add_parser(action)
         command.add_argument("--json", dest="json_file", required=True)
     record_sub.add_parser("status")
+    record_sub.add_parser("digest")
     ux = subparsers.add_parser("ux")
     ux_sub = ux.add_subparsers(dest="action", required=True)
     ux_sub.add_parser("inbox")

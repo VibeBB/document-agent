@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "plugin": "doc",
   "records_dir": "observations/doc",
   "artifact_globs": [
@@ -8,7 +8,14 @@
     "doc-work/*/figures/*",
     "liaison/*.ux-response.json"
   ],
-  "ignore_globs": ["examples/**", "tests/**", ".devin/**"],
+  "dual_review_globs": [
+    "doc-work/*/figures/*.png"
+  ],
+  "ignore_globs": [
+    "examples/**",
+    "tests/**",
+    ".devin/**"
+  ],
   "max_stop_denials": 2,
-  "record_hint": "Use python3 <doc plugin root>/scripts/doc_tool.py record {decision|impression|vision-review} --json FILE (or MCP doc_record_decision / doc_record_impression / doc_record_vision_review); see skills/doc-records/SKILL.md"
+  "record_hint": "Use python3 <doc plugin root>/scripts/doc_tool.py record {decision|impression|vision-review|reconcile|insight|song-receipt|read|search} --json FILE, record status|digest (or the doc_record_* / doc_records_* MCP tools). Impressions need facets, grounded claims and confidence; see skills/doc-records/SKILL.md"
 }

@@ -120,6 +120,40 @@ def _records(root: Path) -> tuple[str, str]:
                 "the panel changes. Next step is to lint the manual and answer the "
                 "liaison request with the resulting verdict."
             ),
+            "facets": {
+                "observed": [
+                    "the panel labels are quoted in source.md",
+                    "the walkthrough comes before troubleshooting",
+                ],
+                "works": ["walkthrough precedes troubleshooting"],
+                "concerns": [
+                    {
+                        "id": "c1",
+                        "text": "panel artwork may change before print",
+                        "severity": "warning",
+                        "about": "self",
+                        "anchor": "panel",
+                    }
+                ],
+                "feelings": {
+                    "maker": "can check each label against the panel",
+                    "user": "finds the labels where the device shows them",
+                },
+                "next_actions": ["lint the manual and answer the liaison request"],
+            },
+            "claims": [
+                {
+                    "text": "source.md names the panel",
+                    "anchor": "panel",
+                    "artifact": "source.md",
+                },
+                {
+                    "text": "source.md lists the labels",
+                    "anchor": "labels",
+                    "artifact": "source.md",
+                },
+            ],
+            "confidence": "medium",
         },
         root,
     )["record"]

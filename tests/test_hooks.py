@@ -124,6 +124,14 @@ def test_protected_record_status_and_session_paths() -> None:
     assert module._is_protected("observations/doc/.sessions/session.json")
 
 
+def test_bard_song_deliveries_are_protected() -> None:
+    module = _load_protect_module()
+    assert module._is_protected("liaison/ode-to-w1.bard-song.json")
+    assert module._is_protected("ws/liaison/ode-to-w1.bard-song.json")
+    assert not module._is_protected("liaison/ode-to-w1.json")
+    assert not module._is_protected("drafts/ode-to-w1.bard-song.json")
+
+
 def _load_protect_module() -> Any:
     spec = importlib.util.spec_from_file_location("protect_lint_report", PROTECT_SCRIPT)
     assert spec is not None and spec.loader is not None
