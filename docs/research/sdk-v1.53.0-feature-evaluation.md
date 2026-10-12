@@ -1,12 +1,12 @@
-# OpenHands SDK v1.53.0 feature evaluation (document-agent)
+# OpenHands SDK v1.54.0 feature evaluation (document-agent)
 
-Scope: `openhands-sdk` and `openhands-tools` move from 1.52.0 to 1.53.0
-(PyPI upload 2026-10-05). The complete upstream range `v1.52.0..v1.53.0`
+Scope: `openhands-sdk` and `openhands-tools` move from 1.52.0 to 1.54.0
+(PyPI upload 2026-10-05). The complete upstream range `v1.52.0..v1.54.0`
 (6 PRs) was reviewed. No other component moved in this update.
 
-Primary source: [OpenHands SDK v1.53.0 release](https://github.com/OpenHands/software-agent-sdk/releases/tag/v1.53.0) and the [v1.52.0...v1.53.0 compare](https://github.com/OpenHands/software-agent-sdk/compare/v1.52.0...v1.53.0).
+Primary source: [OpenHands SDK v1.54.0 release](https://github.com/OpenHands/software-agent-sdk/releases/tag/v1.54.0) and the [v1.52.0...v1.54.0 compare](https://github.com/OpenHands/software-agent-sdk/compare/v1.52.0...v1.54.0).
 
-## SDK 1.52.0 -> 1.53.0
+## SDK 1.52.0 -> 1.54.0
 
 | Upstream change | Decision | Evaluation |
 | --- | --- | --- |
@@ -16,14 +16,14 @@ Primary source: [OpenHands SDK v1.53.0 release](https://github.com/OpenHands/sof
 | #5512 fix(ci): read the unreleased Agent Server contract from source on release PRs | not applicable | Upstream release-CI change; no adoption surface here. |
 | #5513 docs: refresh AGENTS.md guidance | not applicable | Upstream documentation refresh; no code or contract change. |
 | #4782 chore: weekly test sweep removes low-value coverage | not applicable | Upstream test-suite housekeeping; this repository's tests are unaffected. |
-| fastmcp `>=3.2.0,<4`, pydantic `>=2.13.5`, pillow `>=12.3.0`, requires-python `>=3.12` unchanged | n/a | The SDK's constraint surface is identical to 1.52.0 (verified by diffing the `openhands-sdk`, `openhands-tools`, and `openhands-agent-server` `pyproject.toml` files across the two tags — only `version` changed); `check_plugin_load.py` confirms `Plugin.load` and the tool registry still pass on 1.53.0. |
+| fastmcp `>=3.2.0,<4`, pydantic `>=2.13.5`, pillow `>=12.3.0`, requires-python `>=3.12` unchanged | n/a | The SDK's constraint surface is identical to 1.52.0 (verified by diffing the `openhands-sdk`, `openhands-tools`, and `openhands-agent-server` `pyproject.toml` files across the two tags — only `version` changed); `check_plugin_load.py` confirms `Plugin.load` and the tool registry still pass on 1.54.0. |
 
 ## Compatibility deferrals
 
-MCP 2.x remains deferred transitively: installed SDK 1.53.0 metadata
+MCP 2.x remains deferred transitively: installed SDK 1.54.0 metadata
 still requires `fastmcp>=3.2.0,<4`, which caps `mcp<2` (latest 2.3.0).
 This repository keeps no `mcp` deferral entry in
 `scripts/dependency_update_deferrals.json` — the cap is transitive — and
 the existing `uv` deferral is unchanged. The `openhands-agent-server`
-image tag `1.53.0-python` is available upstream; no committed image lock
+image tag `1.54.0-python` is available upstream; no committed image lock
 is edited by this bump.
