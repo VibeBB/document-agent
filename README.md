@@ -6,7 +6,7 @@
 
 ## English
 
-> OpenHands Software Agent SDK v1.54.0
+> OpenHands Software Agent SDK v1.55.1
 
 ### Turn your hardware project into clear product documents
 

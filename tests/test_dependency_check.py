@@ -38,12 +38,12 @@ def test_lock_versions_cover_direct_deps(dep_check: Any) -> None:
     deps = dep_check.dependency_names(dep_check.project_data(REPO_ROOT))
     missing = [name for name in deps if name not in versions]
     assert missing == []
-    assert versions["openhands-sdk"] == "1.54.0"
+    assert versions["openhands-sdk"] == "1.55.1"
     assert versions["pytest"] == "9.1.1"
 
 
 def test_uv_pin_parsed(dep_check: Any) -> None:
-    assert dep_check.uv_version_pin(REPO_ROOT) == "==0.13.0"
+    assert dep_check.uv_version_pin(REPO_ROOT) == "==0.13.1"
 
 
 def test_workflow_files_have_expected_suffixes(dep_check: Any) -> None:
@@ -166,7 +166,7 @@ def test_workflow_downloads_cover_repo_pins(dep_check: Any) -> None:
         REPO_ROOT, fetch_json=fetch_json, list_remote_tags=lambda _u: ["v9.9.9"]
     )
     rows = {(s.name, s.current) for s in statuses}
-    assert ("zizmor", "1.30.1") in rows
+    assert ("zizmor", "1.31.1") in rows
     assert ("rhysd/actionlint", "v1.7.12") in rows
 
 
