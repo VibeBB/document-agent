@@ -38,12 +38,12 @@ def test_lock_versions_cover_direct_deps(dep_check: Any) -> None:
     deps = dep_check.dependency_names(dep_check.project_data(REPO_ROOT))
     missing = [name for name in deps if name not in versions]
     assert missing == []
-    assert versions["openhands-sdk"] == "1.55.1"
-    assert versions["pytest"] == "9.1.1"
+    assert versions["openhands-sdk"] == "1.59.0"
+    assert versions["pytest"] == "9.2.0"
 
 
 def test_uv_pin_parsed(dep_check: Any) -> None:
-    assert dep_check.uv_version_pin(REPO_ROOT) == "==0.13.1"
+    assert dep_check.uv_version_pin(REPO_ROOT) == "==0.13.6"
 
 
 def test_workflow_files_have_expected_suffixes(dep_check: Any) -> None:

@@ -158,6 +158,10 @@ report to the step summary and a `dependency-update-report` artifact and
 skips the tracking-issue update.
 
 
+### 2026-10-29 dependency sweep
+
+sdk/tools `==1.55.1` -> `==1.59.0`, pytest `9.1.1` -> `9.2.0`, ruff `0.17.1` -> `0.17.3` (lock), uv `==0.13.1` -> `==0.13.6`, codeql-action v4.39.0 -> v4.39.1, harden-runner v2.22.1 -> v2.22.3, setup-uv v10.3.0 -> v10.3.3, trivy `v0.76.0` -> `v0.76.1`. Full changelog review: [SDK v1.59.0 feature evaluation](research/sdk-v1.59.0-feature-evaluation.md). Deferrals unchanged (mcp 2.x, Python 3.15 default); mcp reason refreshed to cite SDK 1.59.0.
+
 ### 2026-10-18 dependency sweep
 
 sdk/tools `==1.54.0` -> `==1.55.1`, ruff `==0.17.0` -> `==0.17.1`, uv `==0.13.0` -> `==0.13.1`, zizmor `1.30.1` -> `1.31.1`, trivy `v0.75.0` -> `v0.76.0`, codeql-action v4.38.3 -> v4.39.0. Full changelog review: [SDK v1.55.1 feature evaluation](research/sdk-v1.55.1-feature-evaluation.md). Deferrals unchanged (mcp 2.x, Python 3.15 default); reasons refreshed to cite SDK 1.55.1.
