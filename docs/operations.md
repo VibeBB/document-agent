@@ -241,3 +241,6 @@ When sweeping dependencies to latest releases:
    "latest" is not always adoptable.
 5. This repo ships no image, so the Trivy publish-gate lessons do not
    apply; done means post-merge CI runs are green.
+
+- 2026-10-29: Added `scripts/lint_workflows_local.sh`
+  for local workflow lint parity with workflow-lint.yml.
