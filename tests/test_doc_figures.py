@@ -334,7 +334,7 @@ def test_mcp_view_figure_returns_inline_image_and_records_event(
                 result = await session.call_tool(
                     "doc_view_figure", {"path": "figure.png"}
                 )
-                assert not result.isError
+                assert not result.is_error
                 assert [item.type for item in result.content] == ["image", "text"]
                 assert isinstance(result.content[1], TextContent)
                 metadata = json.loads(result.content[1].text)
