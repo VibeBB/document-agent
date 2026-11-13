@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 ROOT_ENV = "DOC_PLUGIN_ROOT"
+SDK_ROOT_ENV = "PLUGIN_ROOT"
 PROJECT_ENV = "OPENHANDS_PROJECT_DIR"
 SELF_PATH = Path("hooks") / "scripts" / "doc_doctor.py"
 REQUIRED_PATHS = (".plugin/plugin.json", "agents", "skills")
@@ -63,9 +64,10 @@ def _plugin_dirs(name: str) -> list[Path]:
 
 def _candidate_roots() -> list[Path]:
     candidates: list[Path] = []
-    root = os.environ.get(ROOT_ENV)
-    if root:
-        candidates.append(Path(root).expanduser())
+    for env in (ROOT_ENV, SDK_ROOT_ENV):
+        root = os.environ.get(env)
+        if root:
+            candidates.append(Path(root).expanduser())
     return candidates + _plugin_dirs("doc")
 
 

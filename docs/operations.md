@@ -158,6 +158,10 @@ report to the step summary and a `dependency-update-report` artifact and
 skips the tracking-issue update.
 
 
+### 2026-11-14 dependency sweep
+
+sdk/tools `==1.59.0` -> `==1.62.0`, ruff `0.17.3` -> `0.17.5`, uv `==0.13.6` -> `==0.13.8` (uv-pin deferral entry consumed), harden-runner v2.22.3 -> v2.22.4, docker/login-action v4.7.0 -> v4.8.0, codeql-action v4.39.1 -> v4.39.3, zizmor `1.31.1` -> `1.32.0`, trivy `v0.76.1` -> `v0.76.2`; `pydantic` floated to 2.14.3 in the lock and `mcp` floats to 2.x transitively (test-client API unchanged). Full changelog review: [SDK v1.62.0 feature evaluation](research/sdk-v1.62.0-feature-evaluation.md). Adopted: `${PLUGIN_ROOT}` first candidate in hooks.json/.mcp.json command resolution (SDK 1.61.0 #6542). Deferrals unchanged (Python 3.15 default); the uv-pin deferral entry was removed as applied.
+
 ### 2026-10-29 dependency sweep
 
 sdk/tools `==1.55.1` -> `==1.59.0`, pytest `9.1.1` -> `9.2.0`, ruff `0.17.1` -> `0.17.3` (lock), uv `==0.13.1` -> `==0.13.6`, codeql-action v4.39.0 -> v4.39.1, harden-runner v2.22.1 -> v2.22.3, setup-uv v10.3.0 -> v10.3.3, trivy `v0.76.0` -> `v0.76.1`. Full changelog review: [SDK v1.59.0 feature evaluation](research/sdk-v1.59.0-feature-evaluation.md). Deferrals unchanged (mcp 2.x, Python 3.15 default); mcp reason refreshed to cite SDK 1.59.0.
@@ -244,3 +248,4 @@ When sweeping dependencies to latest releases:
 
 - 2026-10-29: Added `scripts/lint_workflows_local.sh`
   for local workflow lint parity with workflow-lint.yml.
+
