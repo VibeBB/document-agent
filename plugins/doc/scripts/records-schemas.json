@@ -221,6 +221,20 @@
         },
         "title": "Insight Refs",
         "type": "array"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id",
+        "description": "Native OpenHands session identity; explicit and environment values must agree."
       }
     },
     "required": [
@@ -621,6 +635,20 @@
         "minItems": 1,
         "title": "Artifacts",
         "type": "array"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id",
+        "description": "Native OpenHands session identity; explicit and environment values must agree."
       }
     },
     "required": [
@@ -1126,6 +1154,20 @@
         },
         "title": "Lookback",
         "type": "array"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id",
+        "description": "Native OpenHands session identity; explicit and environment values must agree."
       }
     },
     "required": [
@@ -1152,6 +1194,20 @@
         "minItems": 2,
         "title": "Reviews",
         "type": "array"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id",
+        "description": "Native OpenHands session identity; explicit and environment values must agree."
       }
     },
     "required": [
@@ -1303,6 +1359,20 @@
         ],
         "default": null,
         "title": "Revisit When"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id",
+        "description": "Native OpenHands session identity; explicit and environment values must agree."
       }
     },
     "required": [
@@ -1342,6 +1412,20 @@
         ],
         "default": null,
         "title": "Follow Up"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id",
+        "description": "Native OpenHands session identity; explicit and environment values must agree."
       }
     },
     "required": [
@@ -1365,6 +1449,20 @@
         "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
         "title": "Producer",
         "type": "string"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id",
+        "description": "Native OpenHands session identity; explicit and environment values must agree."
       }
     },
     "required": [
