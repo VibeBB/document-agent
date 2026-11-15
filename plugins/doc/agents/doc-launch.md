@@ -163,3 +163,11 @@ sister renders with `doc_view_figure` before describing them. A caption or
 step that depends on a picture you could not see is a question for the user,
 not a guess. Embed an image only when the file exists in the workspace, with
 alt text that states what it shows.
+
+
+Use the native `session_id` supplied by your SessionStart record context for VRP
+writes. For an independent blind/tiebreak review, pass `primary_event_id` from
+the delegation brief; the writer binds it to the same image path and SHA-256.
+When delegating, provide only that opaque ID, the image identity and task facts;
+never disclose the earlier review prose. Each reviewer keeps its own native
+session ID, and the primary's session performs reconciliation.

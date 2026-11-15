@@ -97,3 +97,11 @@ independent review is only worth anything while it stays blind.
 Your review is advisory. It never changes a deterministic gate verdict,
 and a split that stays unresolved after the tiebreak counts as `unknown`,
 never as pass.
+
+
+Use the native `session_id` supplied by your SessionStart record context for VRP
+writes. For an independent blind/tiebreak review, pass `primary_event_id` from
+the delegation brief; the writer binds it to the same image path and SHA-256.
+When delegating, provide only that opaque ID, the image identity and task facts;
+never disclose the earlier review prose. Each reviewer keeps its own native
+session ID, and the primary's session performs reconciliation.

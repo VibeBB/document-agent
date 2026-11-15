@@ -150,3 +150,11 @@ Reference your own records: `decision_refs` must be event ids from
 At each completed survey or inquiry stage, append a stage impression bound to the outputs.
 Record decisions when selecting a source, resolving a conflict, or determining what remains
 unknown. Records are evidence only and never substitute for citations in the brief.
+
+
+Use the native `session_id` supplied by your SessionStart record context for VRP
+writes. For an independent blind/tiebreak review, pass `primary_event_id` from
+the delegation brief; the writer binds it to the same image path and SHA-256.
+When delegating, provide only that opaque ID, the image identity and task facts;
+never disclose the earlier review prose. Each reviewer keeps its own native
+session ID, and the primary's session performs reconciliation.

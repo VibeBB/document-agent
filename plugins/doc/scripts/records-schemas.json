@@ -1168,6 +1168,20 @@
         "default": null,
         "title": "Session Id",
         "description": "Native OpenHands session identity; explicit and environment values must agree."
+      },
+      "primary_event_id": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Primary Event Id",
+        "description": "Opaque parent primary review ID supplied in the delegation brief."
       }
     },
     "required": [
