@@ -1,7 +1,7 @@
 ---
 name: doc-craft
 description: Writing rules and templates for product documentation that general users understand - reader journeys, the README (product explanation with a Mermaid diagram, then a quick start), the user manual, the engineer-facing technical reference, plain-language and accessibility rules, and the review checklist. Use before writing or reviewing a README, user manual, or technical reference.
-version: 0.1.0
+version: 1.0.0
 license: BSD-3-Clause
 triggers:
   - readme

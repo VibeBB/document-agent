@@ -1,7 +1,7 @@
 ---
 name: doc-lint
 description: The doc brief contract (doc-brief.json schema 0.1 / 0.2), the doc_lint.py CLI, and the rejection table for README, user manual, technical reference, and launch documents (product page, press release, demo script, launch plan). Use before writing a doc brief or when a lint problem needs fixing.
-version: 0.1.0
+version: 1.0.0
 license: BSD-3-Clause
 triggers:
   - doc-brief.json
