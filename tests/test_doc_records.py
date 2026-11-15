@@ -1470,9 +1470,14 @@ def test_delegated_primary_requires_coordinator_and_returns_round_to_caller(
     )
     with pytest.raises(ValueError, match="coordinator_session_id"):
         records.record_vision_review(_vision(session_id="primary"))
-    primary = records.record_vision_review(
-        _vision(session_id="primary", coordinator_session_id="caller")
-    )["record"]
+    payload = _vision(session_id="primary", coordinator_session_id="caller")
+    schemas = json.loads(
+        (REPO / "plugins/doc/scripts/records-schemas.json").read_text(encoding="utf-8")
+    )
+    schema = schemas["vision_review"]
+    assert schema["additionalProperties"] is False
+    assert payload.keys() <= schema["properties"].keys()
+    primary = records.record_vision_review(payload)["record"]
     blind = records.record_vision_review(
         _vision(
             "blind",

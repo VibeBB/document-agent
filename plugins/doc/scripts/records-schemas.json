@@ -1182,6 +1182,19 @@
         "default": null,
         "title": "Primary Event Id",
         "description": "Opaque parent primary review ID supplied in the delegation brief."
+      },
+      "coordinator_session_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Coordinator Session Id"
       }
     },
     "required": [
