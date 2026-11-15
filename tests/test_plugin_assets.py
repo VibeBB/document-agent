@@ -260,7 +260,8 @@ def test_hooks_json_matches_agent_frontmatter() -> None:
         text = path.read_text(encoding="utf-8")
         for command in (*pre.values(), *post.values()):
             assert f"command: '{command}'" in text, path.name
-        assert f"command: '{require_start}'" in text, path.name
+        delegated_start = require_start.removesuffix("session-start") + "record-context"
+        assert f"command: '{delegated_start}'" in text, path.name
         assert f"command: '{require_stop}'" in text, path.name
     review = (PLUGIN_ROOT / "agents" / "doc-review.md").read_text(encoding="utf-8")
     assert "  - file_editor\n" in review

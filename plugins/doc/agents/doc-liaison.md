@@ -22,7 +22,7 @@ hooks:
       hooks:
         - type: command
           name: require-records
-          command: 'p=$(for c in  "${DOC_PLUGIN_ROOT:-}" "${PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" session-start'
+          command: 'p=$(for c in  "${DOC_PLUGIN_ROOT:-}" "${PLUGIN_ROOT:-}" "${OPENHANDS_PROJECT_DIR:-.}/plugins/doc" "${HOME:-}/.agents/plugins/doc" "${HOME:-}/.openhands/plugins/installed/doc" "${HOME:-}/plugins/installed/doc" "${OH_PERSISTENCE_DIR:-/nonexistent}/plugins/installed/doc"; do [ -f "$c/hooks/scripts/require_records.py" ] && printf %s "$c" && break; done); [ -n "$p" ] || exit 0; exec python3 "$p/hooks/scripts/require_records.py" record-context'
   stop:
     - matcher: "*"
       hooks:
@@ -150,3 +150,11 @@ Reference your own records: `decision_refs` must be event ids from
 At each completed survey or inquiry stage, append a stage impression bound to the outputs.
 Record decisions when selecting a source, resolving a conflict, or determining what remains
 unknown. Records are evidence only and never substitute for citations in the brief.
+
+
+Use the native `session_id` supplied by your SessionStart record context for VRP
+writes. For an independent blind/tiebreak review, pass `primary_event_id` from
+the delegation brief; the writer binds it to the same image path and SHA-256.
+When delegating, provide only that opaque ID, the image identity and task facts;
+never disclose the earlier review prose. Each reviewer keeps its own native
+session ID, and the primary's session performs reconciliation.

@@ -194,7 +194,7 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "doc_view_figure",
         "description": "Return a supported image inline for visual inspection.",
-        "inputSchema": _object({"path": _string()}, ["path"]),
+        "inputSchema": _object({"path": _string(), "session_id": _string()}, ["path"]),
         "annotations": {"readOnlyHint": True},
     },
 ]
@@ -225,7 +225,9 @@ def _call(
             return figures(args["brief"])
         if name == "doc_figure":
             return figure_metadata(args["path"])
-        result = view_figure(args["path"], tool_call_id=tool_call_id)
+        result = view_figure(
+            args["path"], tool_call_id=tool_call_id, session_id=args.get("session_id")
+        )
         image = result.pop("image", None)
         text = result.pop("text", None)
         content: list[dict[str, Any]] = []
