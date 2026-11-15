@@ -351,3 +351,19 @@ def test_mcp_view_figure_returns_inline_image_and_records_event(
                 assert observation["event_id"] == metadata["event_id"]
 
     asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("explicit", [True, False])
+def test_figure_observation_keeps_native_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, explicit: bool
+) -> None:
+    (tmp_path / "photo.png").write_bytes(_png())
+    monkeypatch.delenv("DOC_IMAGE_OBSERVATIONS", raising=False)
+    monkeypatch.delenv("OPENHANDS_SESSION_ID", raising=False)
+    context = {"session_id": "child"} if explicit else {}
+    if not explicit:
+        monkeypatch.setenv("OPENHANDS_SESSION_ID", "child")
+    assert doc_figures.view_figure("photo.png", tmp_path, **context)["ok"]
+    log = tmp_path / "observations/doc/image-observations.jsonl"
+    observation = json.loads(log.read_text(encoding="utf-8"))
+    assert observation["session_id"] == "child"

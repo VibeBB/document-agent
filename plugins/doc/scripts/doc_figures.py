@@ -36,6 +36,7 @@ from doc_brief import (  # type: ignore[reportMissingImports]  # noqa: E402
     validate_brief,
 )
 from doc_lint import build_report  # type: ignore[reportMissingImports]  # noqa: E402
+from doc_records import _session_id  # type: ignore[reportMissingImports]  # noqa: E402
 
 IMAGE_OBSERVATIONS = Path("observations/doc/image-observations.jsonl")
 VISION_REVIEWS = Path("observations/doc/vision-reviews.jsonl")
@@ -304,7 +305,11 @@ def figure_metadata(path: str | Path, root: Path | None = None) -> dict[str, Any
 
 
 def _append_image_observation(
-    root: Path, image: Path, digest: str, tool_call_id: object
+    root: Path,
+    image: Path,
+    digest: str,
+    tool_call_id: object,
+    session_id: str | None = None,
 ) -> str:
     payload: dict[str, Any] = {
         "working_dir": str(root),
@@ -326,7 +331,7 @@ def _append_image_observation(
         **identity,
         "event_id": identifier,
         "recorded_at": datetime.now(UTC).isoformat(),
-        "session_id": None,
+        "session_id": _session_id({"session_id": session_id}),
         "actor": actor(payload),
         "tool_call_id": tool_call_id,
     }
@@ -341,6 +346,7 @@ def view_figure(
     root: Path | None = None,
     *,
     tool_call_id: object = None,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     workspace = _workspace_root(root)
     try:
@@ -400,7 +406,9 @@ def view_figure(
         }
     digest = hashlib.sha256(data).hexdigest()
     try:
-        identifier = _append_image_observation(workspace, image, digest, tool_call_id)
+        identifier = _append_image_observation(
+            workspace, image, digest, tool_call_id, session_id
+        )
     except OSError as exc:
         message = f"could not record image observation: {exc}"
         return {
