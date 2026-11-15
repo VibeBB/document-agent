@@ -34,8 +34,9 @@ took in. A disputed concern cannot be raised again on unchanged bytes; a rejecte
 back only with `revisits` and a reason. Answer a bard song addressed to doc with
 `song-receipt`; never ask bard for another song in return.
 
-When a figure is inspected, create a vision review bound to the image path or to an existing
-vision/image-observation event, with facets, claims and a `lookback` verdict per claim. Every
+When a figure is inspected, create a vision review with its explicit `image_path`; the writer
+hashes the image bytes. Add `source_event_id` when reviewing an existing vision/image-observation
+event, and preserve both bindings. Include facets, claims and a `lookback` verdict per claim. Every
 changed `doc-work/<name>/figures/*.png` also needs a blind review by the `doc-blind-review`
 sub-agent and a `reconcile` of both reviews (one `tiebreak` round if they split; an unresolved
 split stays `unknown`). A changed image has a new hash and needs a fresh review. Never use a
@@ -44,7 +45,8 @@ vision impression as a pass/fail gate.
 Use `doc_figures --brief <work dir>/doc-brief.json` to inventory Markdown and HTML image
 references and Mermaid blocks. `doc_view_figure` accepts workspace PNG, JPEG, GIF, and WebP
 images up to 5 MiB. It appends an image-observation event and returns a source event ID; bind
-the review to that event or the image path. SVG must be rendered to PNG by the owning sister.
+the review with both `source_event_id` and `image_path`. SVG must be rendered to PNG by the owning
+sister. An event-only review cannot discharge the viewed-image obligation at Stop.
 Review checklists are `figure-caption-match` (writer), `figure-reader` (review), and
 `launch-visual` (launch). Intake and liaison should inspect user photos and sister figures that
 carry facts, and preserve any disagreement as a conflict.
