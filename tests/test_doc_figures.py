@@ -191,6 +191,7 @@ def test_view_observation_blocks_stop_until_review_is_recorded(
     doc_records.record_vision_review(
         {
             "source_event_id": result["event_id"],
+            "image_path": "photo.png",
             "model": "test-model",
             "checklist": "figure-reader",
             "findings": [],

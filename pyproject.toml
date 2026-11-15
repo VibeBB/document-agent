@@ -35,6 +35,7 @@ src = ["plugins/doc/skills/doc-lint/scripts", "plugins/doc/hooks/scripts", "plug
 [tool.ruff.format]
 # Family-canonical files are byte-identical across repos (formatted at 88).
 exclude = [
+  "plugins/*/hooks/scripts/require_records.py",
   "scripts/mutation_probe.py",
   "scripts/structural_coverage.py",
   "tests/test_mutation_probe.py",
