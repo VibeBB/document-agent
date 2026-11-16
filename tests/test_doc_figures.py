@@ -6,6 +6,7 @@ import asyncio
 import base64
 import binascii
 import hashlib
+import io
 import json
 import os
 import struct
@@ -88,9 +89,20 @@ def test_native_figure_view_preserves_verified_producer_ancestry(
         )
     import doc_mcp
 
-    result = doc_mcp._call(
-        "doc_view_figure", {"path": "detail.png", "session_id": "reader"}
-    )
+    request = {
+        "jsonrpc": "2.0",
+        "id": "view-detail",
+        "method": "tools/call",
+        "params": {
+            "name": "doc_view_figure",
+            "arguments": {"path": "detail.png", "session_id": "reader"},
+        },
+    }
+    output = io.StringIO()
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(request) + "\n"))
+    monkeypatch.setattr(sys, "stdout", output)
+    assert doc_mcp.serve() == 0
+    result = json.loads(output.getvalue())["result"]["structuredContent"]
     assert result["ok"]
     row = json.loads(
         (tmp_path / "observations/doc/image-observations.jsonl").read_text(
@@ -100,6 +112,51 @@ def test_native_figure_view_preserves_verified_producer_ancestry(
     assert row["image_sha256"] == claim["sha256"]
     assert row["image_identity"] == (claim if producer else None)
     assert row["identity_status"] == ("bound" if producer else "unknown")
+
+
+def test_figure_view_returns_its_own_event_after_an_interleaved_append(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    image = tmp_path / "first.png"
+    image.write_bytes(_png())
+    other = tmp_path / "other.png"
+    other.write_bytes(_png() + b"other image")
+    capture = doc_figures.capture_image_delivery
+    expected: list[str] = []
+
+    def interleave(
+        payload: dict[str, object],
+        root: Path,
+        log: Path,
+        event_ids: list[str] | None = None,
+    ) -> bool:
+        result = capture(payload, root, log, event_ids)
+        assert event_ids is not None
+        expected.extend(event_ids)
+        assert capture(
+            {
+                "tool_name": "file_editor",
+                "session_id": "other-session",
+                "tool_input": {"command": "view", "path": str(other)},
+                "tool_response": {
+                    "content": [
+                        {
+                            "type": "image",
+                            "mimeType": "image/png",
+                            "data": base64.b64encode(other.read_bytes()).decode(),
+                        }
+                    ]
+                },
+            },
+            root,
+            log,
+        )
+        return result
+
+    monkeypatch.setattr(doc_figures, "capture_image_delivery", interleave)
+    result = doc_figures.view_figure("first.png", tmp_path, session_id="reader")
+    assert result["event_id"] == expected[0]
 
 
 def _png() -> bytes:

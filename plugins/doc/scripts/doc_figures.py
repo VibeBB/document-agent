@@ -341,9 +341,10 @@ def _append_image_observation(
             },
         }
     )
-    if not capture_image_delivery(payload, root, log):
+    event_ids: list[str] = []
+    if not capture_image_delivery(payload, root, log, event_ids):
         raise ValueError("figure bytes could not be bound to their observation")
-    return str(json.loads(log.read_text(encoding="utf-8").splitlines()[-1])["event_id"])
+    return event_ids[0]
 
 
 def view_figure(
