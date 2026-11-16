@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import binascii
 import hashlib
 import json
@@ -25,6 +26,80 @@ sys.path.insert(0, str(SCRIPTS))
 
 import doc_figures  # noqa: E402
 import doc_records  # noqa: E402
+
+
+@pytest.mark.parametrize("producer", [False, True])
+def test_native_figure_view_preserves_verified_producer_ancestry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, producer: bool
+) -> None:
+    monkeypatch.setenv("OPENHANDS_PROJECT_DIR", str(tmp_path))
+    monkeypatch.delenv("OPENHANDS_SESSION_ID", raising=False)
+    monkeypatch.delenv("OPENHANDS_CONVERSATION_ID", raising=False)
+    source = tmp_path / "original.png"
+    source.write_bytes(_png())
+    image = tmp_path / "detail.png"
+    image.write_bytes(_png() + b"derived fixture")
+    parent = {
+        "path": str(source),
+        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "owner_plugin": "ux",
+        "origin": "renderer",
+    }
+    claim = {
+        "path": str(image),
+        "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+        "owner_plugin": "ux",
+        "origin": "derived",
+        "operation": "crop",
+        "parents": [parent],
+    }
+    if producer:
+        assert doc_figures.capture_image_delivery(
+            {
+                "tool_name": "ux_image_detail",
+                "tool_response": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(
+                                {
+                                    "inline_images": [
+                                        {
+                                            "path": str(image),
+                                            "sha256": claim["sha256"],
+                                            "attached": True,
+                                            "identity_status": "bound",
+                                            "image_identity": claim,
+                                        }
+                                    ]
+                                }
+                            ),
+                        },
+                        {
+                            "type": "image",
+                            "data": base64.b64encode(image.read_bytes()).decode(),
+                            "mimeType": "image/png",
+                        },
+                    ]
+                },
+            },
+            tmp_path,
+            tmp_path / "observations/ux/image-observations.jsonl",
+        )
+    import doc_mcp
+
+    result = doc_mcp._call(
+        "doc_view_figure", {"path": "detail.png", "session_id": "reader"}
+    )
+    assert result["ok"]
+    row = json.loads(
+        (tmp_path / "observations/doc/image-observations.jsonl").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert row["image_sha256"] == claim["sha256"]
+    assert row["image_identity"] == (claim if producer else None)
+    assert row["identity_status"] == ("bound" if producer else "unknown")
 
 
 def _png() -> bytes:
