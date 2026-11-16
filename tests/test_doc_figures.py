@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import binascii
 import hashlib
+import io
 import json
 import os
 import struct
@@ -25,6 +27,136 @@ sys.path.insert(0, str(SCRIPTS))
 
 import doc_figures  # noqa: E402
 import doc_records  # noqa: E402
+
+
+@pytest.mark.parametrize("producer", [False, True])
+def test_native_figure_view_preserves_verified_producer_ancestry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, producer: bool
+) -> None:
+    monkeypatch.setenv("OPENHANDS_PROJECT_DIR", str(tmp_path))
+    monkeypatch.delenv("OPENHANDS_SESSION_ID", raising=False)
+    monkeypatch.delenv("OPENHANDS_CONVERSATION_ID", raising=False)
+    source = tmp_path / "original.png"
+    source.write_bytes(_png())
+    image = tmp_path / "detail.png"
+    image.write_bytes(_png() + b"derived fixture")
+    parent = {
+        "path": str(source),
+        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "owner_plugin": "ux",
+        "origin": "renderer",
+    }
+    claim = {
+        "path": str(image),
+        "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+        "owner_plugin": "ux",
+        "origin": "derived",
+        "operation": "crop",
+        "parents": [parent],
+    }
+    if producer:
+        assert doc_figures.capture_image_delivery(
+            {
+                "tool_name": "ux_image_detail",
+                "tool_response": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(
+                                {
+                                    "inline_images": [
+                                        {
+                                            "path": str(image),
+                                            "sha256": claim["sha256"],
+                                            "attached": True,
+                                            "identity_status": "bound",
+                                            "image_identity": claim,
+                                        }
+                                    ]
+                                }
+                            ),
+                        },
+                        {
+                            "type": "image",
+                            "data": base64.b64encode(image.read_bytes()).decode(),
+                            "mimeType": "image/png",
+                        },
+                    ]
+                },
+            },
+            tmp_path,
+            tmp_path / "observations/ux/image-observations.jsonl",
+        )
+    import doc_mcp
+
+    request = {
+        "jsonrpc": "2.0",
+        "id": "view-detail",
+        "method": "tools/call",
+        "params": {
+            "name": "doc_view_figure",
+            "arguments": {"path": "detail.png", "session_id": "reader"},
+        },
+    }
+    output = io.StringIO()
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(request) + "\n"))
+    monkeypatch.setattr(sys, "stdout", output)
+    assert doc_mcp.serve() == 0
+    result = json.loads(output.getvalue())["result"]["structuredContent"]
+    assert result["ok"]
+    row = json.loads(
+        (tmp_path / "observations/doc/image-observations.jsonl").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert row["image_sha256"] == claim["sha256"]
+    assert row["image_identity"] == (claim if producer else None)
+    assert row["identity_status"] == ("bound" if producer else "unknown")
+
+
+def test_figure_view_returns_its_own_event_after_an_interleaved_append(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    image = tmp_path / "first.png"
+    image.write_bytes(_png())
+    other = tmp_path / "other.png"
+    other.write_bytes(_png() + b"other image")
+    capture = doc_figures.capture_image_delivery
+    expected: list[str] = []
+
+    def interleave(
+        payload: dict[str, object],
+        root: Path,
+        log: Path,
+        event_ids: list[str] | None = None,
+    ) -> bool:
+        result = capture(payload, root, log, event_ids)
+        assert event_ids is not None
+        expected.extend(event_ids)
+        assert capture(
+            {
+                "tool_name": "file_editor",
+                "session_id": "other-session",
+                "tool_input": {"command": "view", "path": str(other)},
+                "tool_response": {
+                    "content": [
+                        {
+                            "type": "image",
+                            "mimeType": "image/png",
+                            "data": base64.b64encode(other.read_bytes()).decode(),
+                        }
+                    ]
+                },
+            },
+            root,
+            log,
+        )
+        return result
+
+    monkeypatch.setattr(doc_figures, "capture_image_delivery", interleave)
+    result = doc_figures.view_figure("first.png", tmp_path, session_id="reader")
+    assert result["event_id"] == expected[0]
 
 
 def _png() -> bytes:

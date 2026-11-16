@@ -27,14 +27,384 @@ verdict and only ever push toward more work.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import fnmatch
 import hashlib
 import json
+import os
 import re
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
+
+
+def _delivery_mapping(value: object) -> dict[str, object]:
+    return cast(dict[str, object], value) if isinstance(value, dict) else {}
+
+
+def rendered_image_metadata(path: Path, data: bytes, plugin: str) -> dict[str, object]:
+    """Called by local renderer adapters with the exact bytes they attach."""
+    return {
+        "vibebb_image_identity": {
+            "path": str(path.resolve()),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "owner_plugin": plugin,
+            "origin": "renderer",
+        }
+    }
+
+
+def _delivery_items(value: object) -> list[object]:
+    return cast(list[object], value) if isinstance(value, list) else []
+
+
+def _delivery_claim(value: object, root: Path) -> dict[str, object] | None:
+    """Validate an owner claim against intact workspace bytes and ancestry."""
+    claim = _delivery_mapping(value)
+    owners = {
+        "ux",
+        "bard",
+        "circuit",
+        "dashboard",
+        "doc",
+        "firmware",
+        "fpga",
+        "mech",
+        "prodeng",
+        "sim",
+        "wire",
+    }
+
+    def intact(item: dict[str, object]) -> bool:
+        path, digest = item.get("path"), item.get("sha256")
+        if not isinstance(path, str) or not isinstance(digest, str):
+            return False
+        try:
+            resolved = Path(path).resolve()
+            return (
+                str(resolved) == path
+                and resolved.is_relative_to(root)
+                and hashlib.sha256(resolved.read_bytes()).hexdigest() == digest
+            )
+        except (OSError, ValueError):
+            return False
+
+    def original(item: dict[str, object]) -> bool:
+        return (
+            set(item) == {"path", "sha256", "owner_plugin", "origin"}
+            and isinstance(item.get("owner_plugin"), str)
+            and item.get("owner_plugin") in owners
+            and isinstance(item.get("origin"), str)
+            and item.get("origin") in {"renderer", "liaison-response"}
+            and intact(item)
+        )
+
+    if original(claim):
+        return claim
+    parents = [_delivery_mapping(p) for p in _delivery_items(claim.get("parents"))]
+    if (
+        set(claim)
+        != {"path", "sha256", "owner_plugin", "origin", "operation", "parents"}
+        or claim.get("owner_plugin") != "ux"
+        or claim.get("origin") != "derived"
+        or not isinstance(claim.get("operation"), str)
+        or claim.get("operation") not in {"crop", "tile", "composite"}
+        or not 1 <= len(parents) <= 16
+        or (claim.get("operation") != "composite" and len(parents) != 1)
+        or not intact(claim)
+        or any(not original(p) or p["path"] == claim["path"] for p in parents)
+        or len({p["path"] for p in parents}) != len(parents)
+    ):
+        return None
+    return claim
+
+
+def _delivery_receipt(row: dict[str, object]) -> bool:
+    body = {k: v for k, v in row.items() if k not in {"event_id", "recorded_at"}}
+    encoded = json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
+    return row.get("delivery_evidence") == "inline_bytes" and hashlib.sha256(
+        encoded
+    ).hexdigest() == row.get("event_id")
+
+
+def _producer_delivery(path: str, digest: str, root: Path) -> dict[str, object] | None:
+    """Reuse exact UX producer evidence; a filename alone never creates it."""
+    log = Path(
+        os.environ.get("UX_IMAGE_OBSERVATIONS")
+        or "observations/ux/image-observations.jsonl"
+    ).expanduser()
+    log = log if log.is_absolute() else root / log
+    rows, malformed = load_jsonl(log)
+    if malformed:
+        return None
+    claims: dict[str, dict[str, object]] = {}
+    for row in rows:
+        if (
+            row.get("image_path") != path
+            or row.get("image_sha256") != digest
+            or row.get("identity_status") != "bound"
+            or not _delivery_receipt(row)
+        ):
+            continue
+        claim = _delivery_claim(row.get("image_identity"), root)
+        if (
+            claim is not None
+            and claim.get("path") == path
+            and claim.get("sha256") == digest
+        ):
+            claims[json.dumps(claim, sort_keys=True)] = claim
+    return next(iter(claims.values())) if len(claims) == 1 else None
+
+
+def producer_image_metadata(path: Path, data: bytes, root: Path) -> dict[str, object]:
+    """A viewer reuses verified producer claims instead of claiming ownership."""
+    claim = _producer_delivery(
+        str(path.resolve()), hashlib.sha256(data).hexdigest(), root
+    )
+    return {"vibebb_image_identity": claim} if claim is not None else {}
+
+
+def capture_image_delivery(
+    payload: dict[str, object],
+    root: Path,
+    log: Path,
+    event_ids: list[str] | None = None,
+) -> bool:
+    """Append actual returned bytes before the legacy filename observer runs."""
+    response = _delivery_mapping(payload.get("tool_response"))
+    if "error" in response or response.get("is_error") or response.get("isError"):
+        return False
+    blocks = [_delivery_mapping(b) for b in _delivery_items(response.get("content"))]
+    digests: list[str] = []
+    metadata: list[dict[str, object]] = []
+    for block in blocks:
+        block_text = block.get("text")
+        if block.get("type") == "text" and isinstance(block_text, str):
+            try:
+                value = _delivery_mapping(json.loads(block_text))
+                metadata.extend(
+                    _delivery_mapping(m)
+                    for m in _delivery_items(value.get("inline_images"))
+                    if _delivery_mapping(m).get("attached") is True
+                )
+            except ValueError:
+                pass
+        if block.get("type") != "image":
+            continue
+        urls = _delivery_items(block.get("image_urls"))
+        encoded = block.get("data")
+        mime = block.get("mimeType", block.get("mime_type"))
+        if (
+            isinstance(encoded, str)
+            and isinstance(mime, str)
+            and mime in {"image/png", "image/jpeg", "image/gif", "image/webp"}
+        ):
+            urls = [f"data:{mime};base64,{encoded}"]
+        for url in urls:
+            if not isinstance(url, str):
+                continue
+            header, _, data = url.partition(",")
+            if header not in {
+                f"data:{mime};base64"
+                for mime in ("image/png", "image/jpeg", "image/gif", "image/webp")
+            }:
+                continue
+            try:
+                digests.append(
+                    hashlib.sha256(base64.b64decode(data, validate=True)).hexdigest()
+                )
+            except (ValueError, binascii.Error):
+                continue
+        meta = _delivery_mapping(block.get("_meta", block.get("meta")))
+        claim = _delivery_mapping(meta.get("vibebb_image_identity"))
+        if claim:
+            metadata.append(
+                {
+                    "path": claim.get("path"),
+                    "sha256": claim.get("sha256"),
+                    "image_identity": claim,
+                    "identity_status": "bound",
+                }
+            )
+    if not digests:
+        return False
+    action = _delivery_mapping(payload.get("tool_input"))
+    viewed = (
+        action.get("path")
+        if payload.get("tool_name") == "file_editor" and action.get("command") == "view"
+        else None
+    )
+    if payload.get("tool_name") == "wire_view_image":
+        viewed = action.get("image_path")
+    log.parent.mkdir(parents=True, exist_ok=True)
+    sequence = (
+        len(log.read_text(encoding="utf-8").splitlines()) + 1 if log.exists() else 1
+    )
+    occurrences: dict[str, int] = {}
+    with log.open("a", encoding="utf-8") as stream:
+        for digest in digests:
+            matches = [m for m in metadata if m.get("sha256") == digest]
+            paths = sorted(
+                {str(m["path"]) for m in matches if isinstance(m.get("path"), str)}
+            )
+            occurrence = occurrences.get(digest, 0)
+            occurrences[digest] = occurrence + 1
+            path = (
+                paths[occurrence % len(paths)]
+                if paths and len(paths) <= digests.count(digest)
+                else viewed
+                if not paths and len(digests) == 1
+                else None
+            )
+            if isinstance(path, str):
+                path = str((root / path).resolve())
+            candidates: dict[str, dict[str, object]] = {}
+            for entry in matches:
+                candidate = _delivery_claim(entry.get("image_identity"), root)
+                if (
+                    entry.get("identity_status") == "bound"
+                    and candidate is not None
+                    and candidate["path"] == path
+                    and candidate["sha256"] == digest
+                ):
+                    candidates[json.dumps(candidate, sort_keys=True)] = candidate
+            claim = next(iter(candidates.values())) if len(candidates) == 1 else None
+            if not matches and isinstance(path, str):
+                claim = _producer_delivery(path, digest, root)
+            row = {
+                "sequence": sequence,
+                "tool_name": payload.get("tool_name"),
+                "image_path": path,
+                "image_sha256": digest,
+                "image_identity": claim,
+                "identity_status": "bound" if claim else "unknown",
+                "delivery_evidence": "inline_bytes",
+                "session_id": payload.get("session_id"),
+                "actor": {
+                    key: payload[key]
+                    for key in sorted(payload)
+                    if key
+                    in {
+                        "agent",
+                        "agent_name",
+                        "actor",
+                        "subagent_type",
+                        "task_agent",
+                        "action_id",
+                        "tool_call_id",
+                        "parent_id",
+                        "call_id",
+                    }
+                }
+                or None,
+                "tool_call_id": payload.get("tool_call_id") or payload.get("action_id"),
+            }
+            encoded = json.dumps(row, sort_keys=True, separators=(",", ":")).encode()
+            row["event_id"] = hashlib.sha256(encoded).hexdigest()
+            row["recorded_at"] = datetime.now().astimezone().isoformat()
+            stream.write(json.dumps(row, separators=(",", ":")) + "\n")
+            if event_ids is not None:
+                event_ids.append(row["event_id"])
+            sequence += 1
+    return True
+
+
+def review_image_delivery(
+    review: dict[str, object], root: Path, plugin: str
+) -> dict[str, object]:
+    """Compute delivery binding internally; never accept a caller's binding."""
+    unknown: dict[str, object] = {
+        "status": "unknown",
+        "scope": "tool-return",
+        "producer_identity_status": "unknown",
+    }
+    path = review.get("image_path")
+    if not isinstance(path, str):
+        return unknown
+    image = str((root / path).resolve())
+    log = Path(
+        os.environ.get(f"{plugin.upper()}_IMAGE_OBSERVATIONS")
+        or f"observations/{plugin}/image-observations.jsonl"
+    ).expanduser()
+    log = log if log.is_absolute() else root / log
+    try:
+        rows, malformed = load_jsonl(log)
+    except (OSError, UnicodeError, ValueError, RecursionError):
+        return unknown
+    if malformed:
+        return unknown
+    matched: list[dict[str, object]] = []
+    for row in rows:
+        if row.get("delivery_evidence") != "inline_bytes":
+            continue
+        if not _delivery_receipt(row):
+            return unknown
+        if (
+            row.get("image_path") == image
+            and row.get("image_sha256") == review.get("image_sha256")
+            and row.get("session_id") == review.get("session_id")
+        ):
+            matched.append(row)
+    identities = {
+        json.dumps(
+            [row.get("identity_status"), row.get("image_identity")], sort_keys=True
+        )
+        for row in matched
+    }
+    if not matched or len(identities) != 1:
+        return unknown
+    # A source event can cite the separate vision-tool log. Delivery is bound
+    # by path, revision and native session; it does not prove vision selection.
+    # Keep the first receipt stable when the same bytes are delivered again.
+    row = matched[0]
+    claim = _delivery_claim(row.get("image_identity"), root)
+    if row.get("identity_status") != "bound":
+        claim = None
+    return {
+        "status": "bound",
+        "scope": "tool-return",
+        "image_path": image,
+        "image_sha256": row["image_sha256"],
+        "session_id": row.get("session_id"),
+        "observation_event_id": row["event_id"],
+        "image_identity": claim,
+        "producer_identity_status": "bound" if claim else "unknown",
+    }
+
+
+def observed_image_revision(
+    review: dict[str, object], root: Path, plugin: str
+) -> str | None:
+    """Use an explicit native delivery receipt to review a superseded revision."""
+    source, path, session = (
+        review.get(k) for k in ("source_event_id", "image_path", "session_id")
+    )
+    if not source or not isinstance(path, str) or not session:
+        return None
+    log = Path(
+        os.environ.get(f"{plugin.upper()}_IMAGE_OBSERVATIONS")
+        or f"observations/{plugin}/image-observations.jsonl"
+    ).expanduser()
+    try:
+        rows, malformed = load_jsonl(log if log.is_absolute() else root / log)
+    except (OSError, UnicodeError, ValueError, RecursionError):
+        return None
+    matching = [row for row in rows if row.get("event_id") == source]
+    if malformed or not matching:
+        return None
+    if any(
+        not _delivery_receipt(row)
+        or row.get("image_path") != str((root / path).resolve())
+        or row.get("session_id") != session
+        or not _sha(row.get("image_sha256"))
+        for row in matching
+    ):
+        return None
+    digests = {str(row["image_sha256"]) for row in matching}
+    return digests.pop() if len(digests) == 1 else None
+
 
 SCHEMA_VERSION = 2
 IMPRESSION_MIN_CHARS = 400
@@ -175,7 +545,9 @@ def tree_sha256(path: Path) -> str:
     if path.is_file():
         return sha256_file(path)
     digest = hashlib.sha256()
-    for child in sorted(p for p in path.rglob("*") if p.is_file() and not p.is_symlink()):
+    for child in sorted(
+        p for p in path.rglob("*") if p.is_file() and not p.is_symlink()
+    ):
         relative = child.relative_to(path).as_posix()
         if any(part in SKIP_PARTS for part in child.relative_to(path).parts):
             continue
@@ -184,7 +556,9 @@ def tree_sha256(path: Path) -> str:
 
 
 def canonical(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
+    return json.dumps(
+        value, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ).encode()
 
 
 def compute_event_id(record: dict[str, Any]) -> str:
@@ -286,7 +660,9 @@ def _envelope_errors(record: dict[str, Any], kind: str) -> list[str]:
     if not _sha(event):
         errors.append("event_id must be a sha256")
     elif event != compute_event_id(record):
-        errors.append("event_id does not match the record content (edited after writing)")
+        errors.append(
+            "event_id does not match the record content (edited after writing)"
+        )
     return errors
 
 
@@ -295,7 +671,9 @@ def _envelope_errors(record: dict[str, Any], kind: str) -> list[str]:
 
 def _facets_errors(value: Any) -> list[str]:
     if not isinstance(value, dict):
-        return ["facets must be an object {observed, works, concerns, feelings, next_actions}"]
+        return [
+            "facets must be an object {observed, works, concerns, feelings, next_actions}"
+        ]
     facets = cast(dict[str, Any], value)
     errors: list[str] = []
     if not _str_list(facets.get("observed"), 2, FACET_MIN_CHARS):
@@ -325,7 +703,9 @@ def _facets_errors(value: Any) -> list[str]:
         if concern.get("severity") not in SEVERITIES:
             errors.append(f"{where}.severity must be one of {sorted(SEVERITIES)}")
         if not _slug(concern.get("about")):
-            errors.append(f"{where}.about must name the plugin that owns it (or 'self')")
+            errors.append(
+                f"{where}.about must name the plugin that owns it (or 'self')"
+            )
         if "anchor" in concern and not _str(concern["anchor"], ANCHOR_MIN_CHARS):
             errors.append(f"{where}.anchor must be a concrete locator when present")
     if len(set(ids)) != len(ids):
@@ -358,9 +738,13 @@ def _claims_errors(value: Any, min_items: int) -> list[str]:
         if not _str(claim.get("text"), FACET_MIN_CHARS):
             errors.append(f"{where}.text is required")
         if not _str(claim.get("anchor"), ANCHOR_MIN_CHARS):
-            errors.append(f"{where}.anchor must be a concrete locator ({ANCHOR_MIN_CHARS}+ chars)")
+            errors.append(
+                f"{where}.anchor must be a concrete locator ({ANCHOR_MIN_CHARS}+ chars)"
+            )
         if not _str(claim.get("artifact")):
-            errors.append(f"{where}.artifact must name the workspace file the claim reads")
+            errors.append(
+                f"{where}.artifact must name the workspace file the claim reads"
+            )
     return errors
 
 
@@ -387,7 +771,9 @@ def _insights_errors(value: Any) -> list[str]:
         if revisits is not None:
             errors.extend(_insight_ref_errors(revisits, f"{where}.revisits"))
             if not _str(insight.get("revisit_reason"), REASON_MIN_CHARS):
-                errors.append(f"{where}.revisit_reason must say what new evidence reopens it")
+                errors.append(
+                    f"{where}.revisit_reason must say what new evidence reopens it"
+                )
     if len(set(ids)) != len(ids):
         errors.append("insights ids must be unique")
     return errors
@@ -450,7 +836,9 @@ def decision_errors(record: dict[str, Any]) -> list[str]:
         if not _slug(record.get(key)):
             errors.append(f"{key} must be a lowercase slug")
     if not _str(record.get("question"), QUESTION_MIN_CHARS):
-        errors.append(f"question must state the decision in at least {QUESTION_MIN_CHARS} chars")
+        errors.append(
+            f"question must state the decision in at least {QUESTION_MIN_CHARS} chars"
+        )
     if not _str_list(record.get("principles"), 1, PRINCIPLE_MIN_CHARS):
         errors.append(
             "principles must cite at least one first principle, law or standard"
@@ -478,20 +866,30 @@ def decision_errors(record: dict[str, Any]) -> list[str]:
     if record.get("chosen") not in names:
         errors.append("chosen must name one of the options")
     if not _str(record.get("rationale"), RATIONALE_MIN_CHARS):
-        errors.append(f"rationale must explain the choice in at least {RATIONALE_MIN_CHARS} chars")
+        errors.append(
+            f"rationale must explain the choice in at least {RATIONALE_MIN_CHARS} chars"
+        )
     evidence = record.get("evidence")
     if not isinstance(evidence, list) or not evidence:
-        errors.append("evidence must cite at least one artifact (path+sha256) or reference")
+        errors.append(
+            "evidence must cite at least one artifact (path+sha256) or reference"
+        )
     else:
         for index, entry in enumerate(cast(list[Any], evidence)):
-            errors.extend(_ref_errors(entry, f"evidence[{index}]", allow_reference=True))
+            errors.extend(
+                _ref_errors(entry, f"evidence[{index}]", allow_reference=True)
+            )
     for key in ("assumptions", "unknowns"):
         if not _str_list(record.get(key)):
-            errors.append(f"{key} must be a list of strings (empty only when truly none)")
+            errors.append(
+                f"{key} must be a list of strings (empty only when truly none)"
+            )
     if not _str_list(record.get("risks"), 1):
         errors.append("risks must name at least one residual risk of the chosen option")
     if not _str(record.get("revisit_when")):
-        errors.append("revisit_when must name the observation that would reopen the decision")
+        errors.append(
+            "revisit_when must name the observation that would reopen the decision"
+        )
     if record.get("decided_by") not in DECIDERS:
         errors.append("decided_by must be 'agent' or 'user'")
     refs = record.get("impression_refs", [])
@@ -515,10 +913,14 @@ def stage_impression_errors(record: dict[str, Any]) -> list[str]:
         errors.append("stage must be a lowercase slug")
     artifacts = record.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
-        errors.append("artifacts must list what the stage produced or read (path+sha256)")
+        errors.append(
+            "artifacts must list what the stage produced or read (path+sha256)"
+        )
     else:
         for index, entry in enumerate(cast(list[Any], artifacts)):
-            errors.extend(_ref_errors(entry, f"artifacts[{index}]", allow_reference=False))
+            errors.extend(
+                _ref_errors(entry, f"artifacts[{index}]", allow_reference=False)
+            )
     errors.extend(impression_body_errors(record, min_claims=STAGE_CLAIMS_MIN))
     return errors
 
@@ -534,7 +936,9 @@ def vision_review_errors(record: dict[str, Any]) -> list[str]:
         or coordinator == record.get("session_id")
         or record.get("reviewer") != "primary"
     ):
-        errors.append("coordinator_session_id needs a native primary and a non-empty identity")
+        errors.append(
+            "coordinator_session_id needs a native primary and a non-empty identity"
+        )
     if record.get("primary_event_id") is not None:
         if not _sha(record["primary_event_id"]):
             errors.append("primary_event_id must be a sha256 event reference")
@@ -546,7 +950,9 @@ def vision_review_errors(record: dict[str, Any]) -> list[str]:
     if not has_image and not _str(record.get("source_event_id")):
         errors.append("a vision review needs image_path or source_event_id")
     if not _str(record.get("model")):
-        errors.append("model is required (the vision-capable model that read the image)")
+        errors.append(
+            "model is required (the vision-capable model that read the image)"
+        )
     if not _slug(record.get("checklist")):
         errors.append("checklist must be a lowercase slug")
     if record.get("reviewer") not in REVIEWERS:
@@ -559,7 +965,9 @@ def vision_review_errors(record: dict[str, Any]) -> list[str]:
             if not _str(entry.get("category")):
                 errors.append(f"findings[{index}].category is required")
             if entry.get("severity") not in SEVERITIES:
-                errors.append(f"findings[{index}].severity must be one of {sorted(SEVERITIES)}")
+                errors.append(
+                    f"findings[{index}].severity must be one of {sorted(SEVERITIES)}"
+                )
             if not _str(entry.get("note")):
                 errors.append(f"findings[{index}].note is required")
     errors.extend(impression_body_errors(record, min_claims=1))
@@ -584,10 +992,14 @@ def vision_review_errors(record: dict[str, Any]) -> list[str]:
                     f"lookback[{index}].verdict must be one of {sorted(LOOKBACK_VERDICTS)}"
                 )
             if not _str(entry.get("note"), FACET_MIN_CHARS):
-                errors.append(f"lookback[{index}].note must say what you saw on the second look")
+                errors.append(
+                    f"lookback[{index}].note must say what you saw on the second look"
+                )
         missing = sorted(set(range(len(claims))) - covered)
         if missing:
-            errors.append(f"lookback misses claims {missing}; look at the image again for each")
+            errors.append(
+                f"lookback misses claims {missing}; look at the image again for each"
+            )
         refuted = [e for e in lookback if e.get("verdict") == "refuted"]
         if refuted and not findings:
             errors.append("a refuted claim must surface as a finding")
@@ -596,7 +1008,9 @@ def vision_review_errors(record: dict[str, Any]) -> list[str]:
 
 def upstream_read_errors(record: dict[str, Any]) -> list[str]:
     errors = _envelope_errors(record, "upstream_read")
-    errors.extend(_ref_errors(record.get("artifact"), "artifact", allow_reference=False))
+    errors.extend(
+        _ref_errors(record.get("artifact"), "artifact", allow_reference=False)
+    )
     if not _slug(record.get("producer")):
         errors.append("producer must be a plugin slug")
     refs = record.get("refs")
@@ -612,7 +1026,9 @@ def upstream_read_errors(record: dict[str, Any]) -> list[str]:
 
 def _insight_ref_errors(value: Any, field: str) -> list[str]:
     errors = _event_ref_errors(value, field)
-    if isinstance(value, dict) and not _slug(cast(dict[str, Any], value).get("insight_id")):
+    if isinstance(value, dict) and not _slug(
+        cast(dict[str, Any], value).get("insight_id")
+    ):
         errors.append(f"{field}.insight_id must be a slug")
     return errors
 
@@ -627,10 +1043,14 @@ def insight_status_errors(record: dict[str, Any]) -> list[str]:
         errors.append(f"reason must explain the transition ({REASON_MIN_CHARS}+ chars)")
     evidence = record.get("evidence")
     if not isinstance(evidence, list) or not evidence:
-        errors.append("evidence must cite at least one artifact (path+sha256) or reference")
+        errors.append(
+            "evidence must cite at least one artifact (path+sha256) or reference"
+        )
     else:
         for index, entry in enumerate(cast(list[Any], evidence)):
-            errors.extend(_ref_errors(entry, f"evidence[{index}]", allow_reference=True))
+            errors.extend(
+                _ref_errors(entry, f"evidence[{index}]", allow_reference=True)
+            )
     gates = _objects(record.get("gate_verdicts", []))
     if gates is None:
         errors.append("gate_verdicts must be a list of {gate, verdict}")
@@ -639,13 +1059,17 @@ def insight_status_errors(record: dict[str, Any]) -> list[str]:
         if not _str(gate.get("gate")):
             errors.append(f"gate_verdicts[{index}].gate is required")
         if gate.get("verdict") not in GATE_VERDICTS:
-            errors.append(f"gate_verdicts[{index}].verdict must be one of {sorted(GATE_VERDICTS)}")
+            errors.append(
+                f"gate_verdicts[{index}].verdict must be one of {sorted(GATE_VERDICTS)}"
+            )
     decisions = record.get("decision_refs", [])
     if not _str_list(decisions):
         errors.append("decision_refs must be a list of decision event ids")
     if status == "adopted":
         if not any(gate.get("verdict") == "pass" for gate in gates):
-            errors.append("adopting an insight needs a deterministic gate verdict of pass")
+            errors.append(
+                "adopting an insight needs a deterministic gate verdict of pass"
+            )
         if not decisions:
             errors.append("adopting an insight needs the decision that adopted it")
     if status == "deferred" and not _str(record.get("revisit_when")):
@@ -674,15 +1098,24 @@ def review_reconcile_errors(record: dict[str, Any]) -> list[str]:
 
 def song_receipt_errors(record: dict[str, Any]) -> list[str]:
     errors = _envelope_errors(record, "song_receipt")
-    errors.extend(_ref_errors(record.get("delivery"), "delivery", allow_reference=False))
+    errors.extend(
+        _ref_errors(record.get("delivery"), "delivery", allow_reference=False)
+    )
     if not _slug(record.get("song_id")):
         errors.append("song_id must be a slug")
     errors.extend(
-        prose_errors(record.get("felt"), "felt", SONG_FEELING_MIN_CHARS, SONG_FEELING_MIN_SENTENCES)
+        prose_errors(
+            record.get("felt"),
+            "felt",
+            SONG_FEELING_MIN_CHARS,
+            SONG_FEELING_MIN_SENTENCES,
+        )
     )
     if not isinstance(record.get("prompted_review"), bool):
         errors.append("prompted_review must be true or false")
-    if record.get("prompted_review") is True and not _str(record.get("follow_up"), FACET_MIN_CHARS):
+    if record.get("prompted_review") is True and not _str(
+        record.get("follow_up"), FACET_MIN_CHARS
+    ):
         errors.append("prompted_review needs follow_up: what you will look at again")
     return errors
 
@@ -725,7 +1158,9 @@ def song_delivery_errors(value: Any) -> list[str]:
     errors.extend(_ref_errors(doc.get("song"), "song", allow_reference=False))
     refs = doc.get("impression_refs")
     if not isinstance(refs, list) or not refs:
-        errors.append("impression_refs must cite the impressions the song was made from")
+        errors.append(
+            "impression_refs must cite the impressions the song was made from"
+        )
     else:
         for index, ref in enumerate(cast(list[Any], refs)):
             errors.extend(_event_ref_errors(ref, f"impression_refs[{index}]"))
@@ -755,7 +1190,9 @@ def primary_scope_errors(review: dict[str, Any], root: Path) -> list[str]:
     if not isinstance(context, dict):
         return ["the primary review's session context is not an object"]
     context = cast(dict[str, Any], context)
-    if context.get("scope_origin") == "record-context" and not review.get("coordinator_session_id"):
+    if context.get("scope_origin") == "record-context" and not review.get(
+        "coordinator_session_id"
+    ):
         return ["a delegated primary needs coordinator_session_id from its caller"]
     return []
 
@@ -833,7 +1270,9 @@ def chain_errors(records: list[dict[str, Any]], filename: str) -> list[str]:
     for index, record in enumerate(records, start=1):
         where = f"{filename} line {index}"
         if record.get("schema_version") != SCHEMA_VERSION:
-            errors.append(f"{where}: schema_version {record.get('schema_version')!r} in a v2 log")
+            errors.append(
+                f"{where}: schema_version {record.get('schema_version')!r} in a v2 log"
+            )
             break
         if record.get("sequence") != index:
             errors.append(
@@ -874,7 +1313,8 @@ def verify_log(path: Path, kind: str) -> tuple[list[dict[str, Any]], list[str]]:
         errors = record_errors(kind, record)
         if errors:
             problems.append(
-                f"{path.name} #{record.get('sequence')}: invalid {kind}: " + "; ".join(errors)
+                f"{path.name} #{record.get('sequence')}: invalid {kind}: "
+                + "; ".join(errors)
             )
     return records, problems
 
@@ -937,7 +1377,11 @@ def _text_files(path: Path) -> list[Path]:
     if not path.is_dir():
         return []
     files = sorted(p for p in path.rglob("*") if p.is_file() and not p.is_symlink())
-    kept = [p for p in files if not any(part in SKIP_PARTS for part in p.relative_to(path).parts)]
+    kept = [
+        p
+        for p in files
+        if not any(part in SKIP_PARTS for part in p.relative_to(path).parts)
+    ]
     return kept[:GROUNDING_MAX_FILES]
 
 
@@ -979,7 +1423,9 @@ def grounding_errors(record: dict[str, Any], root: Path) -> list[str]:
         target = str(claim.get("artifact") or "").strip("/").removeprefix("./")
         anchor = str(claim.get("anchor") or "")
         if artifacts and not any(covers(path, target) for path in artifacts):
-            errors.append(f"claims[{index}].artifact {target} is not among the bound artifacts")
+            errors.append(
+                f"claims[{index}].artifact {target} is not among the bound artifacts"
+            )
             continue
         path = (root / target).resolve()
         try:
@@ -1001,12 +1447,19 @@ def grounding_errors(record: dict[str, Any], root: Path) -> list[str]:
                 f"claims[{index}].anchor {anchor!r} does not occur in {target}; quote the"
                 " exact token you read"
             )
-    if record.get("kind") == "stage_impression" and any_text and grounded == 0 and not errors:
+    if (
+        record.get("kind") == "stage_impression"
+        and any_text
+        and grounded == 0
+        and not errors
+    ):
         errors.append("no claim is grounded in a text artifact")
     return errors
 
 
-def novelty_errors(record: dict[str, Any], previous: Iterable[dict[str, Any]]) -> list[str]:
+def novelty_errors(
+    record: dict[str, Any], previous: Iterable[dict[str, Any]]
+) -> list[str]:
     texts = [str(p.get("impression") or "") for p in previous]
     similarity = max_similarity(str(record.get("impression") or ""), texts)
     if similarity >= NEAR_DUPLICATE_REJECT:
@@ -1014,7 +1467,9 @@ def novelty_errors(record: dict[str, Any], previous: Iterable[dict[str, Any]]) -
             f"impression is {similarity:.0%} similar to an earlier one; read the artifact"
             " again and write what is specific to it"
         ]
-    if similarity >= NEAR_DUPLICATE_DELTA and not _str(record.get("delta"), REASON_MIN_CHARS):
+    if similarity >= NEAR_DUPLICATE_DELTA and not _str(
+        record.get("delta"), REASON_MIN_CHARS
+    ):
         return [
             f"impression is {similarity:.0%} similar to an earlier one; add delta"
             f" ({REASON_MIN_CHARS}+ chars) saying what changed since"
@@ -1037,18 +1492,23 @@ def upstream_resolution_errors(
         assert target is not None
         known = {
             str(c.get("id"))
-            for c in _objects(cast(dict[str, Any], target.get("facets") or {}).get("concerns"))
+            for c in _objects(
+                cast(dict[str, Any], target.get("facets") or {}).get("concerns")
+            )
             or []
         }
         unknown = sorted(set(cast(list[str], entry.get("concern_ids") or [])) - known)
         if unknown:
-            errors.append(f"upstream[{index}].concern_ids {unknown} are not in that impression")
+            errors.append(
+                f"upstream[{index}].concern_ids {unknown} are not in that impression"
+            )
     return errors
 
 
 def _artifact_set(record: dict[str, Any]) -> frozenset[tuple[str, str]]:
     pairs = {
-        (str(a.get("path")), str(a.get("sha256"))) for a in _objects(record.get("artifacts")) or []
+        (str(a.get("path")), str(a.get("sha256")))
+        for a in _objects(record.get("artifacts")) or []
     }
     if _sha(record.get("image_sha256")):
         pairs.add(("image", str(record["image_sha256"])))
@@ -1072,7 +1532,10 @@ def reraise_errors(
         for kind in IMPRESSION_KINDS:
             for other in logs.get(kind, []):
                 for entry in _objects(other.get("upstream", [])) or []:
-                    if entry.get("system") != plugin or entry.get("disposition") != "disputed":
+                    if (
+                        entry.get("system") != plugin
+                        or entry.get("disposition") != "disputed"
+                    ):
                         continue
                     earlier = own.get(str(entry.get("event_id")))
                     if earlier is None:
@@ -1091,7 +1554,10 @@ def reraise_errors(
                 continue
             if _artifact_set(record) != _artifact_set(earlier):
                 continue
-            if jaccard(shingles(text), shingles(str(old.get("text") or ""))) >= RERAISE_SIMILARITY:
+            if (
+                jaccard(shingles(text), shingles(str(old.get("text") or "")))
+                >= RERAISE_SIMILARITY
+            ):
                 errors.append(
                     f"concern {concern.get('id')!r} repeats one {by} disputed while the artifacts"
                     " are unchanged; change the design or cite new evidence instead"
@@ -1123,7 +1589,9 @@ def insight_write_errors(
     workspace: dict[str, tuple[dict[str, list[dict[str, Any]]], list[str]]],
 ) -> list[str]:
     ref = cast(dict[str, Any], record.get("insight") or {})
-    target, problem = resolve_ref(workspace, str(ref.get("system")), str(ref.get("event_id")))
+    target, problem = resolve_ref(
+        workspace, str(ref.get("system")), str(ref.get("event_id"))
+    )
     if problem:
         return [f"insight: {problem}"]
     assert target is not None
@@ -1182,7 +1650,9 @@ def _categories(review: dict[str, Any]) -> set[str]:
     return {str(f.get("category")) for f in _objects(review.get("findings")) or []}
 
 
-def reviews_agree(left: dict[str, Any], right: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+def reviews_agree(
+    left: dict[str, Any], right: dict[str, Any]
+) -> tuple[bool, dict[str, Any]]:
     overlap = jaccard(_categories(left), _categories(right))
     one_sided = sorted(_error_categories(left) ^ _error_categories(right))
     agree = overlap >= RECONCILE_AGREE_JACCARD and not one_sided
@@ -1201,17 +1671,27 @@ def reconcile(primary: dict[str, Any], others: list[dict[str, Any]]) -> dict[str
     first, second = primary, others[0]
     agree, metrics = reviews_agree(first, second)
     if len(others) == 1:
-        return {"round": 1, "outcome": "agree" if agree else "disagree", "metrics": metrics}
+        return {
+            "round": 1,
+            "outcome": "agree" if agree else "disagree",
+            "metrics": metrics,
+        }
     third = others[1]
     sides = [reviews_agree(third, first)[0], reviews_agree(third, second)[0]]
     reviews = [first, second, third]
     union = sorted(set[str]().union(*(_error_categories(r) for r in reviews)))
-    majority = [c for c in union if sum(c in _error_categories(r) for r in reviews) >= 2]
+    majority = [
+        c for c in union if sum(c in _error_categories(r) for r in reviews) >= 2
+    ]
     metrics = metrics | {
         "tiebreak_agrees_with": [i for i, s in enumerate(sides) if s],
         "majority_errors": majority,
     }
-    return {"round": 2, "outcome": "agree" if any(sides) else "unresolved", "metrics": metrics}
+    return {
+        "round": 2,
+        "outcome": "agree" if any(sides) else "unresolved",
+        "metrics": metrics,
+    }
 
 
 # --- reading across plugins ----------------------------------------------
@@ -1249,7 +1729,9 @@ def concern_status(
 
 
 def acknowledged(
-    logs: dict[str, list[dict[str, Any]]], ref: dict[str, Any], after: float | None = None
+    logs: dict[str, list[dict[str, Any]]],
+    ref: dict[str, Any],
+    after: float | None = None,
 ) -> bool:
     for kind in IMPRESSION_KINDS:
         for record in logs.get(kind, []):
@@ -1257,9 +1739,9 @@ def acknowledged(
             if after is not None and moment is not None and moment < after:
                 continue
             for entry in _objects(record.get("upstream", [])) or []:
-                if entry.get("system") == ref.get("system") and entry.get("event_id") == ref.get(
+                if entry.get("system") == ref.get("system") and entry.get(
                     "event_id"
-                ):
+                ) == ref.get("event_id"):
                     return True
     return False
 
@@ -1279,7 +1761,11 @@ def song_deliveries(root: Path) -> list[tuple[str, dict[str, Any] | None, list[s
             continue
         problems = song_delivery_errors(value)
         found.append(
-            (relative, cast(dict[str, Any], value) if isinstance(value, dict) else None, problems)
+            (
+                relative,
+                cast(dict[str, Any], value) if isinstance(value, dict) else None,
+                problems,
+            )
         )
     return found
 
@@ -1342,7 +1828,11 @@ def digest(root: Path) -> dict[str, Any]:
                             }
                         )
                 for insight in _objects(record.get("insights", [])) or []:
-                    ref = {"system": system, "event_id": event, "insight_id": insight.get("id")}
+                    ref = {
+                        "system": system,
+                        "event_id": event,
+                        "insight_id": insight.get("id"),
+                    }
                     insights.append(
                         {
                             "ref": f"{system}:{event}#{insight.get('id')}",
@@ -1356,7 +1846,10 @@ def digest(root: Path) -> dict[str, Any]:
             for ref in _objects(read.get("refs")) or []:
                 if not acknowledged(logs, ref, after):
                     unread.append(
-                        {"reader": system, "ref": f"{ref.get('system')}:{ref.get('event_id')}"}
+                        {
+                            "reader": system,
+                            "ref": f"{ref.get('system')}:{ref.get('event_id')}",
+                        }
                     )
         for item in logs.get("review_reconcile", []):
             if item.get("outcome") != "agree":
@@ -1381,7 +1874,9 @@ def digest(root: Path) -> dict[str, Any]:
             }
         )
     order = {"error": 0, "warning": 1, "info": 2}
-    concerns.sort(key=lambda c: (order.get(str(c["severity"]), 3), str(c["recorded_at"])))
+    concerns.sort(
+        key=lambda c: (order.get(str(c["severity"]), 3), str(c["recorded_at"]))
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "systems": systems,
@@ -1423,19 +1918,34 @@ def search(
             for record in logs.get(record_kind, []):
                 if stage and record.get("stage") != stage:
                     continue
-                paths = [str(a.get("path")) for a in _objects(record.get("artifacts")) or []]
-                shas = [str(a.get("sha256")) for a in _objects(record.get("artifacts")) or []]
+                paths = [
+                    str(a.get("path")) for a in _objects(record.get("artifacts")) or []
+                ]
+                shas = [
+                    str(a.get("sha256"))
+                    for a in _objects(record.get("artifacts")) or []
+                ]
                 if record.get("image_path"):
                     paths.append(str(record["image_path"]))
                     shas.append(str(record.get("image_sha256")))
-                if artifact and not any(artifact in p for p in paths) and artifact not in shas:
+                if (
+                    artifact
+                    and not any(artifact in p for p in paths)
+                    and artifact not in shas
+                ):
                     continue
                 facets = cast(dict[str, Any], record.get("facets") or {})
                 concerns = _objects(facets.get("concerns")) or []
-                if severity and not any(c.get("severity") == severity for c in concerns):
+                if severity and not any(
+                    c.get("severity") == severity for c in concerns
+                ):
                     continue
-                statuses = [concern_status(workspace, name, record, c) for c in concerns]
-                if open_only and not any(s in ("open", "deferred", "disputed") for s in statuses):
+                statuses = [
+                    concern_status(workspace, name, record, c) for c in concerns
+                ]
+                if open_only and not any(
+                    s in ("open", "deferred", "disputed") for s in statuses
+                ):
                     continue
                 blob = normalized(json.dumps(record, ensure_ascii=False))
                 score = sum(blob.count(term) for term in terms)
@@ -1450,7 +1960,8 @@ def search(
                     "artifacts": paths,
                     "impression": record.get("impression"),
                     "concerns": [
-                        {**c, "status": s} for c, s in zip(concerns, statuses, strict=True)
+                        {**c, "status": s}
+                        for c, s in zip(concerns, statuses, strict=True)
                     ],
                     "insights": record.get("insights", []),
                 }
@@ -1472,9 +1983,13 @@ def recall(root: Path, plugin: str, limit: int = 8) -> str:
     """Short SessionStart briefing: what sisters worry about for this plugin, songs waiting."""
     summary = digest(root)
     lines: list[str] = []
-    broken = [name for name, info in summary["systems"].items() if info["integrity"] != "ok"]
+    broken = [
+        name for name, info in summary["systems"].items() if info["integrity"] != "ok"
+    ]
     if broken:
-        lines.append(f"- records with broken integrity (treat as unknown): {', '.join(broken)}")
+        lines.append(
+            f"- records with broken integrity (treat as unknown): {', '.join(broken)}"
+        )
     for concern in summary["open_concerns"]:
         if concern["about"] != plugin or len(lines) >= limit:
             continue
@@ -1484,10 +1999,14 @@ def recall(root: Path, plugin: str, limit: int = 8) -> str:
         )
     for read in summary["unacknowledged_reads"]:
         if read["reader"] == plugin and len(lines) < limit:
-            lines.append(f"- impression {read['ref']} came with an import and is still unanswered")
+            lines.append(
+                f"- impression {read['ref']} came with an import and is still unanswered"
+            )
     for song in summary["songs"]:
         if song["to"] == plugin and not song["received"] and len(lines) < limit:
-            lines.append(f"- bard sent you a song: {song['path']} (record a song receipt)")
+            lines.append(
+                f"- bard sent you a song: {song['path']} (record a song receipt)"
+            )
     if not lines:
         return ""
     return (
@@ -1524,7 +2043,10 @@ def matches(relative: str, patterns: list[str]) -> bool:
 def changed_artifacts(root: Path, policy: dict[str, Any], since: float) -> list[str]:
     """Workspace-relative files matching artifact_globs modified at or after `since`."""
     records_dir = str(policy["records_dir"]).strip("/")
-    ignore = [*cast(list[str], policy.get("ignore_globs") or []), f"{OBSERVATIONS_DIR}/**"]
+    ignore = [
+        *cast(list[str], policy.get("ignore_globs") or []),
+        f"{OBSERVATIONS_DIR}/**",
+    ]
     found: set[str] = set()
     for pattern in cast(list[str], policy["artifact_globs"]):
         for path in root.glob(pattern):

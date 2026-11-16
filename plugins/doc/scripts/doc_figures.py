@@ -11,7 +11,6 @@ import os
 import re
 import subprocess
 import sys
-from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, cast
@@ -26,10 +25,11 @@ if str(HOOK_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(HOOK_SCRIPTS))
 
 from _provenance import (  # type: ignore[reportMissingImports]  # noqa: E402
-    actor,
-    event_id,
     events_path,
-    next_sequence,
+)
+from _records import (  # type: ignore[reportMissingImports]  # noqa: E402
+    capture_image_delivery,
+    producer_image_metadata,
 )
 from doc_brief import (  # type: ignore[reportMissingImports]  # noqa: E402
     Target,
@@ -307,7 +307,7 @@ def figure_metadata(path: str | Path, root: Path | None = None) -> dict[str, Any
 def _append_image_observation(
     root: Path,
     image: Path,
-    digest: str,
+    data: bytes,
     tool_call_id: object,
     session_id: str | None = None,
 ) -> str:
@@ -318,27 +318,33 @@ def _append_image_observation(
     if tool_call_id is not None:
         payload["tool_call_id"] = tool_call_id
     log = events_path(payload, "DOC_IMAGE_OBSERVATIONS", IMAGE_OBSERVATIONS)
-    log.parent.mkdir(parents=True, exist_ok=True)
-    sequence = next_sequence(log)
-    identity = {
-        "sequence": sequence,
-        "tool_name": VIEW_TOOL_NAME,
-        "image_path": str(image),
-        "image_sha256": digest,
+    claim = producer_image_metadata(image, data, root).get("vibebb_image_identity")
+    metadata = {
+        "path": str(image),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "attached": True,
+        "identity_status": "bound" if claim else "unknown",
+        "image_identity": claim,
     }
-    identifier = event_id(identity)
-    record = {
-        **identity,
-        "event_id": identifier,
-        "recorded_at": datetime.now(UTC).isoformat(),
-        "session_id": _session_id({"session_id": session_id}),
-        "actor": actor(payload),
-        "tool_call_id": tool_call_id,
-    }
-    with log.open("a", encoding="utf-8") as stream:
-        stream.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
-        stream.write("\n")
-    return identifier
+    payload.update(
+        {
+            "session_id": _session_id({"session_id": session_id}),
+            "tool_response": {
+                "content": [
+                    {"type": "text", "text": json.dumps({"inline_images": [metadata]})},
+                    {
+                        "type": "image",
+                        "data": base64.b64encode(data).decode("ascii"),
+                        "mimeType": SUPPORTED_MIMES[image.suffix.lower()],
+                    },
+                ]
+            },
+        }
+    )
+    event_ids: list[str] = []
+    if not capture_image_delivery(payload, root, log, event_ids):
+        raise ValueError("figure bytes could not be bound to their observation")
+    return event_ids[0]
 
 
 def view_figure(
@@ -407,7 +413,7 @@ def view_figure(
     digest = hashlib.sha256(data).hexdigest()
     try:
         identifier = _append_image_observation(
-            workspace, image, digest, tool_call_id, session_id
+            workspace, image, data, tool_call_id, session_id
         )
     except OSError as exc:
         message = f"could not record image observation: {exc}"
